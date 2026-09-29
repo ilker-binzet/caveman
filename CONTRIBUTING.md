@@ -128,6 +128,9 @@ node tests/test_caveman_init.js
 
 # Flag-file symlink-safety tests
 node tests/test_symlink_flag.js
+
+# Docs site (docs/index.html) stays in sync with README numbers + installer agents
+node tests/test_docs_site.js
 ```
 
 CI runs all of the above on every PR. If any test depends on a network or

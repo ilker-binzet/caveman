@@ -3,450 +3,1412 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Caveman | Lithic Token Compression</title>
+<title>Caveman — few tokens, do trick</title>
+<meta name="description" content="Make your AI coding agent talk like a caveman. Same answers, 65% fewer output tokens. Works with Claude Code, Codex, Gemini, Cursor, Windsurf, Cline, Copilot and 30+ more.">
+<meta name="theme-color" content="#fff8f6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1a120e" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="assets/dancing-rock.svg" type="image/svg+xml">
+<meta property="og:title" content="Caveman — why use many token when few do trick">
+<meta property="og:description" content="Same answers, 65% fewer output tokens. Brain still big. Mouth small.">
+<meta property="og:image" content="assets/caveman-logo-banner.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300..800&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0&display=block" rel="stylesheet">
+<script>
+  // Apply saved theme before first paint so there is no light/dark flash.
+  (function () {
+    var html = document.documentElement;
+    if (document.fonts && document.fonts.load) {
+      html.classList.add('icons-pending');
+      // The icon @font-face only exists once the Google Fonts stylesheet has
+      // parsed, so retry after load. If it never arrives, icons stay hidden
+      // instead of showing their ligature names as text.
+      var tryIcons = function () {
+        document.fonts.load('24px "Material Symbols Rounded"', 'home').then(function (f) {
+          if (f.length) html.classList.remove('icons-pending');
+        }, function () {});
+      };
+      tryIcons();
+      window.addEventListener('load', tryIcons);
+    }
+    try {
+      var t = localStorage.getItem('caveman-theme');
+      if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+      // Re-apply the last dynamic-color scheme instantly; the color engine
+      // loads later and recomputes it.
+      var c = JSON.parse(localStorage.getItem('caveman-scheme') || 'null');
+      var dark = t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+      if (c && c.seed === localStorage.getItem('caveman-seed') && c.dark === dark) {
+        for (var k in c.vars) document.documentElement.style.setProperty(k, c.vars[k]);
+      }
+    } catch (e) {}
+  })();
+</script>
 <style>
+/* ==========================================================================
+   Material 3 tokens
+   Baseline scheme = SchemeTonalSpot from seed #b5541f (rock orange), generated
+   with @material/material-color-utilities. Users can re-seed at runtime
+   (dynamic color); these values are the no-JS / offline fallback.
+   ========================================================================== */
 :root {
-  /* Ultra-premium stark palette */
-  --bg: #000000;
-  --bg-elevated: #080808;
-  --border: #1A1A1A;
-  --border-hover: #333333;
-  --text-primary: #FFFFFF;
-  --text-secondary: #888888;
-  --text-tertiary: #444444;
-  --accent: #FF3300;
-  --accent-glow: rgba(255, 51, 0, 0.15);
-  
-  /* Syntax / Diff colors */
-  --diff-removed: rgba(255, 51, 0, 0.2);
-  --diff-removed-text: #FF6644;
-  --diff-kept: rgba(255, 255, 255, 0.05);
+  color-scheme: light;
+  --md-sys-color-primary:#8e4d2d;--md-sys-color-on-primary:#ffffff;--md-sys-color-primary-container:#ffdbcc;--md-sys-color-on-primary-container:#713718;--md-sys-color-secondary:#76574a;--md-sys-color-on-secondary:#ffffff;--md-sys-color-secondary-container:#ffdbcc;--md-sys-color-on-secondary-container:#5c4033;--md-sys-color-tertiary:#665f31;--md-sys-color-on-tertiary:#ffffff;--md-sys-color-tertiary-container:#eee4a9;--md-sys-color-on-tertiary-container:#4d471b;--md-sys-color-error:#ba1a1a;--md-sys-color-on-error:#ffffff;--md-sys-color-error-container:#ffdad6;--md-sys-color-on-error-container:#93000a;--md-sys-color-surface:#fff8f6;--md-sys-color-on-surface:#221a16;--md-sys-color-on-surface-variant:#52443d;--md-sys-color-surface-container-lowest:#ffffff;--md-sys-color-surface-container-low:#fff1ec;--md-sys-color-surface-container:#fceae3;--md-sys-color-surface-container-high:#f6e5de;--md-sys-color-surface-container-highest:#f1dfd8;--md-sys-color-outline:#85736c;--md-sys-color-outline-variant:#d7c2ba;--md-sys-color-inverse-surface:#382e2a;--md-sys-color-inverse-on-surface:#ffede6;--md-sys-color-inverse-primary:#ffb694;--md-sys-color-scrim:#000000;--md-sys-color-shadow:#000000;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --md-sys-color-primary:#ffb694;--md-sys-color-on-primary:#542104;--md-sys-color-primary-container:#713718;--md-sys-color-on-primary-container:#ffdbcc;--md-sys-color-secondary:#e6bead;--md-sys-color-on-secondary:#442a1f;--md-sys-color-secondary-container:#5c4033;--md-sys-color-on-secondary-container:#ffdbcc;--md-sys-color-tertiary:#d1c88f;--md-sys-color-on-tertiary:#363107;--md-sys-color-tertiary-container:#4d471b;--md-sys-color-on-tertiary-container:#eee4a9;--md-sys-color-error:#ffb4ab;--md-sys-color-on-error:#690005;--md-sys-color-error-container:#93000a;--md-sys-color-on-error-container:#ffdad6;--md-sys-color-surface:#1a120e;--md-sys-color-on-surface:#f1dfd8;--md-sys-color-on-surface-variant:#d7c2ba;--md-sys-color-surface-container-lowest:#140c09;--md-sys-color-surface-container-low:#221a16;--md-sys-color-surface-container:#271e1a;--md-sys-color-surface-container-high:#322824;--md-sys-color-surface-container-highest:#3d332e;--md-sys-color-outline:#a08d85;--md-sys-color-outline-variant:#52443d;--md-sys-color-inverse-surface:#f1dfd8;--md-sys-color-inverse-on-surface:#382e2a;--md-sys-color-inverse-primary:#8e4d2d;--md-sys-color-scrim:#000000;--md-sys-color-shadow:#000000;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --md-sys-color-primary:#ffb694;--md-sys-color-on-primary:#542104;--md-sys-color-primary-container:#713718;--md-sys-color-on-primary-container:#ffdbcc;--md-sys-color-secondary:#e6bead;--md-sys-color-on-secondary:#442a1f;--md-sys-color-secondary-container:#5c4033;--md-sys-color-on-secondary-container:#ffdbcc;--md-sys-color-tertiary:#d1c88f;--md-sys-color-on-tertiary:#363107;--md-sys-color-tertiary-container:#4d471b;--md-sys-color-on-tertiary-container:#eee4a9;--md-sys-color-error:#ffb4ab;--md-sys-color-on-error:#690005;--md-sys-color-error-container:#93000a;--md-sys-color-on-error-container:#ffdad6;--md-sys-color-surface:#1a120e;--md-sys-color-on-surface:#f1dfd8;--md-sys-color-on-surface-variant:#d7c2ba;--md-sys-color-surface-container-lowest:#140c09;--md-sys-color-surface-container-low:#221a16;--md-sys-color-surface-container:#271e1a;--md-sys-color-surface-container-high:#322824;--md-sys-color-surface-container-highest:#3d332e;--md-sys-color-outline:#a08d85;--md-sys-color-outline-variant:#52443d;--md-sys-color-inverse-surface:#f1dfd8;--md-sys-color-inverse-on-surface:#382e2a;--md-sys-color-inverse-primary:#8e4d2d;--md-sys-color-scrim:#000000;--md-sys-color-shadow:#000000;
+  }
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+:root {
+  /* Type — Roboto Flex, M3 type scale converted sp → rem (1rem = 16px) */
+  --md-ref-typeface-brand: 'Roboto Flex', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --md-ref-typeface-plain: 'Roboto Flex', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --md-ref-typeface-mono: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
+  /* Shape — M3 corner scale */
+  --md-sys-shape-corner-extra-small: 4px;
+  --md-sys-shape-corner-small: 8px;
+  --md-sys-shape-corner-medium: 12px;
+  --md-sys-shape-corner-large: 16px;
+  --md-sys-shape-corner-extra-large: 28px;
+  --md-sys-shape-corner-full: 9999px;
+
+  /* Elevation */
+  --md-sys-elevation-1: 0 1px 2px rgb(0 0 0 / .3), 0 1px 3px 1px rgb(0 0 0 / .15);
+  --md-sys-elevation-2: 0 1px 2px rgb(0 0 0 / .3), 0 2px 6px 2px rgb(0 0 0 / .15);
+  --md-sys-elevation-3: 0 1px 3px rgb(0 0 0 / .3), 0 4px 8px 3px rgb(0 0 0 / .15);
+
+  /* Motion */
+  --md-sys-motion-duration-short2: 100ms;
+  --md-sys-motion-duration-short4: 200ms;
+  --md-sys-motion-duration-medium2: 300ms;
+  --md-sys-motion-duration-long2: 500ms;
+  --md-sys-motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --md-sys-motion-easing-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+
+  /* State layer opacities */
+  --md-sys-state-hover: .08;
+  --md-sys-state-focus: .10;
+  --md-sys-state-pressed: .10;
+
+  /* Spacing (4px base) */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px; --sp-8: 48px; --sp-10: 64px;
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { scroll-behavior: smooth; scroll-padding-top: 80px; -webkit-text-size-adjust: 100%; }
 body {
-  background-color: var(--bg); color: var(--text-primary);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  overflow-x: hidden; -webkit-font-smoothing: antialiased; letter-spacing: -0.02em;
-  cursor: url("assets/dancing-rock-32.png") 16 16, auto;
+  margin: 0;
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-ref-typeface-plain);
+  font-size: 1rem; line-height: 1.5rem; letter-spacing: .03125rem;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard),
+              color var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard);
 }
+img, svg { display: block; max-width: 100%; }
+a { color: var(--md-sys-color-primary); }
+code, kbd, pre { font-family: var(--md-ref-typeface-mono); }
+:focus-visible { outline: 3px solid var(--md-sys-color-secondary); outline-offset: 2px; }
+::selection { background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); }
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.skip-link { position: absolute; left: var(--sp-4); top: -60px; z-index: 100; padding: var(--sp-3) var(--sp-4);
+  background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-radius: var(--md-sys-shape-corner-full); text-decoration: none; }
+.skip-link:focus { top: var(--sp-3); }
 
-::selection { background: var(--text-primary); color: var(--bg); }
-
-/* --- DYNAMIC BACKGROUND ELEMENTS --- */
-
-/* 1. Crisp Grid Background */
-.bg-grid {
-  position: fixed; inset: 0; z-index: -2; pointer-events: none;
-  background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
-                    linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
-  mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%);
-  -webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%);
+.icon {
+  font-family: 'Material Symbols Rounded'; font-weight: normal; font-style: normal;
+  font-size: 24px; line-height: 1; letter-spacing: normal; text-transform: none;
+  display: inline-block; white-space: nowrap; direction: ltr; user-select: none;
+  width: 1em; height: 1em; overflow: hidden; /* no layout blow-up if the icon font fails */
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  -webkit-font-smoothing: antialiased; flex-shrink: 0;
 }
+.icons-pending .icon { visibility: hidden; } /* hide ligature names until the icon font is ready */
+.icon.filled { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
 
-/* 2. Slow Breathing Aura */
-.ambient-aura {
-  position: fixed; width: 80vw; height: 80vh; border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 51, 0, 0.05) 0%, transparent 60%);
-  top: 50%; left: 50%; transform: translate(-50%, -50%);
-  pointer-events: none; z-index: -3; filter: blur(80px);
-  animation: breatheAura 15s ease-in-out infinite alternate;
-}
-@keyframes breatheAura {
-  0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.5; }
-  100% { transform: translate(-50%, -60%) scale(1.2); opacity: 1; }
-}
+/* Type scale */
+.display-large  { font-family: var(--md-ref-typeface-brand); font-size: clamp(2.8rem, 8vw, 3.5625rem); line-height: 1.12; font-weight: 400; letter-spacing: -.015625rem; margin: 0; }
+.display-small  { font-family: var(--md-ref-typeface-brand); font-size: 2.25rem; line-height: 2.75rem; font-weight: 400; margin: 0; }
+.headline-large { font-family: var(--md-ref-typeface-brand); font-size: 2rem; line-height: 2.5rem; font-weight: 400; margin: 0; }
+.headline-small { font-family: var(--md-ref-typeface-brand); font-size: 1.5rem; line-height: 2rem; font-weight: 400; margin: 0; }
+.title-large    { font-family: var(--md-ref-typeface-brand); font-size: 1.375rem; line-height: 1.75rem; font-weight: 400; margin: 0; }
+.title-medium   { font-size: 1rem; line-height: 1.5rem; font-weight: 500; letter-spacing: .009375rem; margin: 0; }
+.title-small    { font-size: .875rem; line-height: 1.25rem; font-weight: 500; letter-spacing: .00625rem; margin: 0; }
+.body-large     { font-size: 1rem; line-height: 1.5rem; letter-spacing: .03125rem; margin: 0; }
+.body-medium    { font-size: .875rem; line-height: 1.25rem; letter-spacing: .015625rem; margin: 0; }
+.label-large    { font-size: .875rem; line-height: 1.25rem; font-weight: 500; letter-spacing: .00625rem; }
+.label-medium   { font-size: .75rem; line-height: 1rem; font-weight: 500; letter-spacing: .03125rem; }
+.on-surface-variant { color: var(--md-sys-color-on-surface-variant); }
 
-/* 3. Cursor Tracking Spotlight */
-.cursor-glow {
-  position: fixed; width: 500px; height: 500px; border-radius: 50%;
-  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
-  top: 0; left: 0; transform: translate(-50%, -50%);
-  pointer-events: none; z-index: -1; transition: opacity 0.3s ease;
-  mix-blend-mode: screen;
-}
+/* ==========================================================================
+   Layout
+   ========================================================================== */
+.container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 var(--sp-4); }
+@media (min-width: 600px) { .container { padding: 0 var(--sp-5); } }
+section.block { padding: var(--sp-10) 0; }
+.section-head { max-width: 720px; margin-bottom: var(--sp-6); }
+.section-head .eyebrow { display: inline-flex; align-items: center; gap: var(--sp-2); color: var(--md-sys-color-primary); margin-bottom: var(--sp-2); }
+.section-head p { margin-top: var(--sp-3); color: var(--md-sys-color-on-surface-variant); }
 
-/* GLOBAL LAYOUT */
-.container { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
-.section { padding: 8rem 0; position: relative; }
-.section-badge {
-  font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; text-transform: uppercase;
-  color: var(--accent); letter-spacing: 0.1em; margin-bottom: 1.5rem; display: block;
-}
-.section-title { font-size: clamp(2rem, 4vw, 3rem); font-weight: 500; letter-spacing: -0.04em; margin-bottom: 1.5rem; line-height: 1.1; }
-.section-desc { font-size: 1.1rem; color: var(--text-secondary); max-width: 600px; line-height: 1.6; font-weight: 300; }
+/* ==========================================================================
+   Components
+   ========================================================================== */
 
-/* TELEMETRY BONK WIDGET */
-.telemetry-widget {
-  position: fixed; top: 24px; right: 24px; z-index: 100;
-  display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
-  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--text-tertiary);
+/* State layer (hover / focus / press) shared by interactive components */
+.state { position: relative; overflow: hidden; isolation: isolate; }
+.state::before {
+  content: ""; position: absolute; inset: 0; background: currentColor; opacity: 0; z-index: -1;
+  transition: opacity var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
   pointer-events: none;
 }
-.telemetry-val { color: var(--text-primary); font-size: 0.85rem; }
-.bonk-flash { color: var(--accent); text-shadow: 0 0 10px var(--accent); }
-
-/* HERO */
-.hero { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; padding-top: 4rem; position: relative; }
-.hero-repo {
-  display: inline-flex; align-items: center; gap: 8px; font-family: 'JetBrains Mono', monospace;
-  font-size: 0.8rem; color: var(--text-secondary); text-decoration: none;
-  padding: 6px 12px; border: 1px solid var(--border); border-radius: 4px;
-  margin-bottom: 3rem; transition: all 0.2s; background: rgba(0,0,0,0.5);
-  backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+.state:hover::before { opacity: var(--md-sys-state-hover); }
+.state:focus-visible::before { opacity: var(--md-sys-state-focus); }
+.state:active::before { opacity: var(--md-sys-state-pressed); }
+.ripple {
+  position: absolute; border-radius: 50%; transform: scale(0); opacity: .16; background: currentColor;
+  pointer-events: none; animation: ripple 450ms var(--md-sys-motion-easing-standard) forwards; z-index: -1;
 }
-.hero-repo:hover { border-color: var(--text-secondary); color: var(--text-primary); }
-.hero h1 {
-  font-size: clamp(4rem, 10vw, 8rem); font-weight: 400; letter-spacing: -0.06em;
-  line-height: 0.9; margin-bottom: 2rem; text-transform: lowercase;
-}
-.hero-subtitle { font-size: clamp(1.2rem, 3vw, 1.5rem); color: var(--text-secondary); max-width: 700px; font-weight: 300; line-height: 1.5; }
+@keyframes ripple { to { transform: scale(1); opacity: 0; } }
 
-/* THE INLINE CLI COPY */
-.cli-install {
-  margin-top: 4rem; display: inline-flex; align-items: center; background: rgba(10,10,10,0.6);
-  border: 1px solid var(--border); border-radius: 8px; padding: 4px 4px 4px 20px;
-  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); transition: border-color 0.3s;
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2);
+  height: 40px; padding: 0 var(--sp-5); border: 0; border-radius: var(--md-sys-shape-corner-full);
+  font: inherit; font-size: .875rem; font-weight: 500; letter-spacing: .00625rem; line-height: 1.25rem;
+  cursor: pointer; text-decoration: none; white-space: nowrap;
+  transition: box-shadow var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
 }
-.cli-install:hover { border-color: var(--border-hover); }
-.cli-prefix { color: var(--text-tertiary); font-family: 'JetBrains Mono', monospace; margin-right: 16px; }
-.cli-code { font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; color: var(--text-primary); padding-right: 24px; }
-.cli-btn {
-  background: var(--text-primary); color: var(--bg); border: none;
-  padding: 10px 20px; border-radius: 4px; font-weight: 500; font-size: 0.85rem;
-  cursor: pointer; transition: transform 0.2s;
+.btn .icon { font-size: 18px; margin-left: -8px; }
+.btn.lg { height: 56px; padding: 0 var(--sp-6); font-size: 1rem; }
+.btn.lg .icon { font-size: 24px; }
+.btn-filled { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
+.btn-filled:hover { box-shadow: var(--md-sys-elevation-1); }
+.btn-tonal { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
+.btn-outlined { background: transparent; color: var(--md-sys-color-primary); border: 1px solid var(--md-sys-color-outline); }
+.btn-text { background: transparent; color: var(--md-sys-color-primary); padding: 0 var(--sp-3); }
+.btn-text .icon { margin-left: 0; }
+
+.icon-btn {
+  display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: var(--md-sys-shape-corner-full);
+  border: 0; background: transparent; color: var(--md-sys-color-on-surface-variant); cursor: pointer; text-decoration: none;
 }
-.cli-btn:active { transform: scale(0.96); }
+.icon-btn.tonal { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
 
-/* TOKEN PAYLOAD DIFF */
-.diff-container { margin-top: 4rem; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: rgba(0,0,0,0.3); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
-.diff-header {
-  display: flex; justify-content: space-between; padding: 12px 20px;
-  border-bottom: 1px solid var(--border); background: rgba(10,10,10,0.8);
-  font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--text-secondary);
+/* Top app bar */
+.top-app-bar {
+  position: sticky; top: 0; z-index: 40; height: 64px;
+  background: var(--md-sys-color-surface);
+  transition: background-color var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard);
 }
-.diff-body { padding: 32px; font-size: 1.1rem; line-height: 1.8; font-weight: 300; color: var(--text-secondary); }
-.diff-strike {
-  text-decoration: line-through; color: var(--diff-removed-text); background: var(--diff-removed);
-  padding: 2px 4px; border-radius: 3px; transition: opacity 0.3s;
+.top-app-bar.scrolled { background: var(--md-sys-color-surface-container); }
+.top-app-bar .container { display: flex; align-items: center; gap: var(--sp-2); height: 100%; }
+.brand { display: inline-flex; align-items: center; gap: var(--sp-3); color: var(--md-sys-color-on-surface); text-decoration: none; margin-right: auto; }
+.brand img { width: 32px; height: 32px; }
+.nav-links { display: none; gap: var(--sp-1); }
+.nav-links a {
+  display: inline-flex; align-items: center; height: 40px; padding: 0 var(--sp-3); border-radius: var(--md-sys-shape-corner-full);
+  color: var(--md-sys-color-on-surface-variant); text-decoration: none;
 }
-.diff-keep { color: var(--text-primary); font-weight: 400; }
-.diff-toggle { margin-top: 1rem; display: flex; gap: 1rem; justify-content: flex-end; padding: 0 20px 20px; }
-.toggle-btn {
-  background: none; border: 1px solid var(--border); color: var(--text-secondary);
-  padding: 6px 12px; border-radius: 4px; font-size: 0.8rem; cursor: pointer;
-  font-family: 'JetBrains Mono', monospace; transition: all 0.2s;
+.nav-links a[aria-current="true"] { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
+@media (min-width: 960px) { .nav-links { display: flex; } .menu-toggle { display: none; } }
+
+/* Navigation drawer (modal, compact screens) */
+.scrim {
+  position: fixed; inset: 0; z-index: 60; background: rgb(0 0 0 / .32);
+  opacity: 0; pointer-events: none; transition: opacity var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard);
 }
-.toggle-btn.active { background: var(--text-primary); color: var(--bg); border-color: var(--text-primary); }
-
-/* BENTO GRID */
-.bento-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
-  background: var(--border); border: 1px solid var(--border); border-radius: 8px;
-  overflow: hidden; margin-top: 4rem;
+.scrim.open { opacity: 1; pointer-events: auto; }
+.nav-drawer {
+  position: fixed; top: 0; bottom: 0; left: 0; z-index: 61; width: min(360px, 86vw);
+  background: var(--md-sys-color-surface-container-low); border-radius: 0 var(--md-sys-shape-corner-large) var(--md-sys-shape-corner-large) 0;
+  padding: var(--sp-3); transform: translateX(-105%); visibility: hidden;
+  transition: transform var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized-decelerate), visibility 0s linear var(--md-sys-motion-duration-medium2);
+  display: flex; flex-direction: column; gap: var(--sp-1);
 }
-.bento-box { background: rgba(5,5,5,0.9); padding: 40px; display: flex; flex-direction: column; justify-content: space-between; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
-.bento-large { grid-column: span 2; }
-@media (max-width: 800px) { .bento-grid { grid-template-columns: 1fr; } .bento-large { grid-column: span 1; } }
-.bento-icon { font-size: 2rem; margin-bottom: 2rem; filter: grayscale(1); opacity: 0.7; }
-.bento-title { font-size: 1.2rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--text-primary); }
-.bento-desc { color: var(--text-secondary); font-size: 0.95rem; line-height: 1.5; }
-
-/* DATA VIZ BENCHMARKS */
-.viz-container { margin-top: 4rem; display: flex; flex-direction: column; gap: 2px; background: var(--border); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-.viz-row { display: grid; grid-template-columns: 35% 65%; background: rgba(5,5,5,0.9); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); transition: background 0.2s; }
-.viz-row:hover { background: rgba(15,15,15,0.9); }
-.viz-label { padding: 20px; font-size: 0.95rem; color: var(--text-secondary); border-right: 1px solid var(--border); display: flex; align-items: center; }
-.viz-track-container { padding: 20px; display: flex; align-items: center; }
-.viz-track { width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; position: relative; overflow: hidden; }
-.viz-fill { position: absolute; left: 0; top: 0; height: 100%; background: var(--accent); border-radius: 3px; }
-.viz-stats { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; width: 120px; text-align: right; color: var(--text-primary); }
-.viz-stats span { color: var(--text-tertiary); margin-right: 8px; }
-
-/* FLOATING GLASS TERMINAL */
-.glass-terminal {
-  margin-top: 4rem; background: rgba(10, 10, 10, 0.4); border: 1px solid var(--border);
-  border-radius: 12px; backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
-  box-shadow: 0 40px 80px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05); overflow: hidden;
+.nav-drawer.open { transform: none; visibility: visible; transition-delay: 0s; box-shadow: var(--md-sys-elevation-1); }
+.nav-drawer .headline { padding: var(--sp-4) var(--sp-4) var(--sp-3); color: var(--md-sys-color-on-surface-variant); }
+.nav-drawer a {
+  display: flex; align-items: center; gap: var(--sp-3); height: 56px; padding: 0 var(--sp-4); border-radius: var(--md-sys-shape-corner-full);
+  color: var(--md-sys-color-on-surface-variant); text-decoration: none; font-size: .875rem; font-weight: 500;
 }
-.term-header { padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; gap: 8px; }
-.term-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--border-hover); }
-.term-body { padding: 32px 24px; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; color: var(--text-secondary); min-height: 250px; }
-.term-line { margin-bottom: 8px; line-height: 1.6; }
-.term-accent { color: var(--accent); }
-.term-input-row { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
-.term-input { background: none; border: none; color: var(--text-primary); font-family: inherit; font-size: inherit; flex: 1; outline: none; caret-color: var(--accent); }
+.nav-drawer a[aria-current="true"] { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
 
-/* TICKER MARQUEE */
-.marquee { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 1.5rem 0; overflow: hidden; display: flex; background: rgba(0,0,0,0.3); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
-.marquee-content { display: flex; gap: 4rem; animation: marquee 20s linear infinite; white-space: nowrap; }
-.marquee-item { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--text-tertiary); letter-spacing: 0.05em; }
-.marquee-item span { color: var(--text-primary); font-weight: 500; margin-left: 8px; }
-@keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+/* Menu (theme picker) */
+.menu-anchor { position: relative; }
+.menu {
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 50; min-width: 280px; padding: var(--sp-2) 0;
+  background: var(--md-sys-color-surface-container); color: var(--md-sys-color-on-surface);
+  border-radius: var(--md-sys-shape-corner-extra-small); box-shadow: var(--md-sys-elevation-2);
+  opacity: 0; transform: translateY(-8px) scaleY(.96); transform-origin: top; pointer-events: none; visibility: hidden;
+  transition: opacity var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+              transform var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard), visibility 0s linear var(--md-sys-motion-duration-short4);
+}
+.menu.open { opacity: 1; transform: none; pointer-events: auto; visibility: visible; transition-delay: 0s; }
+.menu .menu-label { padding: var(--sp-2) var(--sp-3) var(--sp-1); color: var(--md-sys-color-on-surface-variant); display: block; }
+.menu-item {
+  display: flex; width: 100%; align-items: center; gap: var(--sp-3); height: 48px; padding: 0 var(--sp-3); border: 0; background: transparent;
+  color: inherit; font: inherit; font-size: .875rem; cursor: pointer; text-align: left;
+}
+.menu-item .check { margin-left: auto; color: var(--md-sys-color-primary); visibility: hidden; }
+.menu-item[aria-checked="true"] .check { visibility: visible; }
+.menu hr { border: 0; border-top: 1px solid var(--md-sys-color-outline-variant); margin: var(--sp-2) 0; }
+.swatches { display: flex; flex-wrap: wrap; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3) var(--sp-3); }
+.swatch {
+  width: 40px; height: 40px; border-radius: var(--md-sys-shape-corner-full); cursor: pointer; padding: 0;
+  border: 2px solid var(--md-sys-color-outline-variant); display: grid; place-items: center; color: #fff;
+}
+.swatch[aria-checked="true"] { border-color: var(--md-sys-color-on-surface); box-shadow: 0 0 0 2px var(--md-sys-color-surface) inset; }
+.swatch .icon { font-size: 20px; opacity: 0; }
+.swatch[aria-checked="true"] .icon { opacity: 1; }
+.swatch.custom { background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red); position: relative; }
+.swatch.custom input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
 
-/* FOOTER */
-.footer { border-top: 1px solid var(--border); padding: 4rem 24px; font-size: 0.85rem; color: var(--text-tertiary); display: flex; justify-content: space-between; max-width: 1040px; margin: 0 auto; position: relative; z-index: 10; }
-.footer a { color: var(--text-secondary); text-decoration: none; transition: color 0.2s; }
-.footer a:hover { color: var(--text-primary); }
+/* Cards */
+.card { border-radius: var(--md-sys-shape-corner-medium); padding: var(--sp-5); }
+.card-elevated { background: var(--md-sys-color-surface-container-low); box-shadow: var(--md-sys-elevation-1); }
+.card-filled { background: var(--md-sys-color-surface-container-highest); }
+.card-outlined { background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline-variant); }
 
-.reveal { opacity: 0; transform: translateY(30px); transition: all 1s cubic-bezier(0.16, 1, 0.3, 1); }
-.reveal.visible { opacity: 1; transform: translateY(0); }
+/* Chips */
+.chip-set { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.chip {
+  display: inline-flex; align-items: center; gap: var(--sp-2); height: 32px; padding: 0 var(--sp-4);
+  border-radius: var(--md-sys-shape-corner-small); border: 1px solid var(--md-sys-color-outline);
+  background: transparent; color: var(--md-sys-color-on-surface-variant); font: inherit; font-size: .875rem; font-weight: 500; cursor: pointer;
+}
+.chip .icon { font-size: 18px; margin-left: -8px; }
+.chip[aria-pressed="true"], .chip[aria-checked="true"] {
+  background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); border-color: transparent;
+}
+.chip .chip-check { display: none; }
+.chip[aria-pressed="true"] .chip-check { display: inline-block; }
+.chip.assist { color: var(--md-sys-color-on-surface); border-color: var(--md-sys-color-outline-variant); cursor: default; }
+.chip.assist .icon { color: var(--md-sys-color-primary); }
+
+/* Segmented buttons */
+.segmented { display: inline-flex; border: 1px solid var(--md-sys-color-outline); border-radius: var(--md-sys-shape-corner-full); overflow: hidden; max-width: 100%; overflow-x: auto; }
+.segmented button {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); min-width: 48px; height: 40px; padding: 0 var(--sp-3);
+  border: 0; border-left: 1px solid var(--md-sys-color-outline); background: transparent; color: var(--md-sys-color-on-surface);
+  font: inherit; font-size: .875rem; font-weight: 500; cursor: pointer; white-space: nowrap;
+}
+.segmented button:first-child { border-left: 0; }
+.segmented button .icon { font-size: 18px; display: none; }
+.segmented button[aria-checked="true"] { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
+.segmented button[aria-checked="true"] .icon { display: inline-block; }
+
+/* Tabs (primary) */
+.tabs { display: flex; border-bottom: 1px solid var(--md-sys-color-surface-container-highest); overflow-x: auto; scrollbar-width: none; }
+.tab {
+  flex: 1 0 auto; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  min-height: 64px; padding: var(--sp-2) var(--sp-4); border: 0; background: transparent; color: var(--md-sys-color-on-surface-variant);
+  font: inherit; font-size: .875rem; font-weight: 500; cursor: pointer; position: relative;
+}
+.tab[aria-selected="true"] { color: var(--md-sys-color-primary); }
+.tab[aria-selected="true"]::after {
+  content: ""; position: absolute; left: 50%; bottom: 0; width: min(64px, 70%); height: 3px; transform: translateX(-50%);
+  background: var(--md-sys-color-primary); border-radius: 3px 3px 0 0;
+}
+
+/* Text fields (outlined) + select + slider */
+.field { display: flex; flex-direction: column; gap: var(--sp-1); }
+.field label { color: var(--md-sys-color-on-surface-variant); }
+.field .supporting { color: var(--md-sys-color-on-surface-variant); }
+.input, .select {
+  height: 56px; padding: 0 var(--sp-4); border: 1px solid var(--md-sys-color-outline); border-radius: var(--md-sys-shape-corner-extra-small);
+  background: transparent; color: var(--md-sys-color-on-surface); font: inherit; font-size: 1rem; width: 100%;
+}
+.input:hover, .select:hover { border-color: var(--md-sys-color-on-surface); }
+.input:focus, .select:focus { outline: none; border: 2px solid var(--md-sys-color-primary); padding: 0 calc(var(--sp-4) - 1px); }
+.select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 22px) 50%, calc(100% - 16px) 50%; background-size: 6px 6px; background-repeat: no-repeat; padding-right: 44px; }
+.select option { background: var(--md-sys-color-surface-container); color: var(--md-sys-color-on-surface); }
+.slider-row { display: flex; align-items: center; gap: var(--sp-4); }
+.slider-row output { min-width: 5ch; text-align: right; font-variant-numeric: tabular-nums; }
+input[type="range"] { -webkit-appearance: none; appearance: none; flex: 1; height: 44px; background: transparent; cursor: pointer; }
+input[type="range"]::-webkit-slider-runnable-track { height: 16px; border-radius: 8px;
+  background: linear-gradient(to right, var(--md-sys-color-primary) var(--fill, 50%), var(--md-sys-color-secondary-container) var(--fill, 50%)); }
+input[type="range"]::-moz-range-track { height: 16px; border-radius: 8px; background: var(--md-sys-color-secondary-container); }
+input[type="range"]::-moz-range-progress { height: 16px; border-radius: 8px; background: var(--md-sys-color-primary); }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 4px; height: 44px; margin-top: -14px; border-radius: 2px; background: var(--md-sys-color-primary); }
+input[type="range"]::-moz-range-thumb { width: 4px; height: 44px; border: 0; border-radius: 2px; background: var(--md-sys-color-primary); }
+
+/* Code block */
+.code {
+  display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-2) var(--sp-2) var(--sp-4);
+  background: var(--md-sys-color-inverse-surface); color: var(--md-sys-color-inverse-on-surface);
+  border-radius: var(--md-sys-shape-corner-medium); min-height: 56px;
+}
+.code pre { margin: 0; flex: 1; min-width: 0; overflow-x: auto; font-size: .875rem; line-height: 1.5rem; white-space: pre; padding: var(--sp-2) 0; }
+.code .prompt { color: var(--md-sys-color-inverse-primary); user-select: none; }
+.code .icon-btn { color: var(--md-sys-color-inverse-on-surface); }
+.inline-code { font-size: .875em; padding: .1em .4em; border-radius: var(--md-sys-shape-corner-extra-small); background: var(--md-sys-color-surface-container-highest); }
+
+/* Snackbar */
+.snackbar {
+  position: fixed; left: 50%; bottom: var(--sp-4); z-index: 80; transform: translate(-50%, 24px); opacity: 0; pointer-events: none;
+  display: flex; align-items: center; gap: var(--sp-2); min-height: 48px; max-width: min(560px, calc(100vw - 32px)); padding: var(--sp-3) var(--sp-4);
+  background: var(--md-sys-color-inverse-surface); color: var(--md-sys-color-inverse-on-surface);
+  border-radius: var(--md-sys-shape-corner-extra-small); box-shadow: var(--md-sys-elevation-3); font-size: .875rem;
+  transition: opacity var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard), transform var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized-decelerate);
+}
+.snackbar.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* Extended FAB */
+.fab {
+  position: fixed; right: var(--sp-4); bottom: var(--sp-4); z-index: 30;
+  display: inline-flex; align-items: center; gap: var(--sp-3); height: 56px; padding: 0 var(--sp-4) 0 var(--sp-4);
+  border: 0; border-radius: var(--md-sys-shape-corner-large); cursor: pointer; text-decoration: none;
+  background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container);
+  box-shadow: var(--md-sys-elevation-3); font: inherit; font-size: .875rem; font-weight: 500;
+  transition: transform var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard), opacity var(--md-sys-motion-duration-medium2);
+}
+.fab.hidden { transform: translateY(96px); opacity: 0; pointer-events: none; }
+@media (min-width: 600px) { .fab { right: var(--sp-5); bottom: var(--sp-5); } }
+
+/* ==========================================================================
+   Sections
+   ========================================================================== */
+
+/* Hero */
+.hero { padding: var(--sp-8) 0 var(--sp-10); }
+.hero-grid { display: grid; gap: var(--sp-6); align-items: center; }
+@media (min-width: 960px) { .hero-grid { grid-template-columns: 1.1fr .9fr; gap: var(--sp-8); } }
+.hero .tagline { color: var(--md-sys-color-primary); margin-bottom: var(--sp-4); display: inline-flex; align-items: center; gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-3); border-radius: var(--md-sys-shape-corner-small); background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); }
+.hero .lede { margin-top: var(--sp-5); max-width: 560px; color: var(--md-sys-color-on-surface-variant); font-size: 1.125rem; line-height: 1.75rem; }
+.hero-actions { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-top: var(--sp-6); }
+.hero .chip-set { margin-top: var(--sp-5); }
+.hero-visual {
+  background: var(--md-sys-color-surface-container); border-radius: var(--md-sys-shape-corner-extra-large); padding: var(--sp-5);
+  display: flex; flex-direction: column; gap: var(--sp-3); position: relative; overflow: hidden;
+}
+.hero-visual::after {
+  content: ""; position: absolute; width: 280px; height: 280px; right: -90px; top: -90px; border-radius: 42% 58% 60% 40% / 45% 45% 55% 55%;
+  background: var(--md-sys-color-tertiary-container); opacity: .7; z-index: 0;
+}
+.bubble { position: relative; z-index: 1; border-radius: var(--md-sys-shape-corner-large); padding: var(--sp-4); }
+.bubble .who { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+.bubble.normal { background: var(--md-sys-color-surface-container-highest); color: var(--md-sys-color-on-surface-variant); border-bottom-left-radius: var(--md-sys-shape-corner-extra-small); }
+.bubble.cave { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-bottom-right-radius: var(--md-sys-shape-corner-extra-small); margin-left: var(--sp-6); }
+.bubble.cave code { background: rgb(255 255 255 / .18); padding: 0 .3em; border-radius: 4px; }
+.hero-meter { position: relative; z-index: 1; display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) var(--sp-1) 0; }
+.hero-meter .track { flex: 1; height: 8px; border-radius: 4px; background: var(--md-sys-color-secondary-container); overflow: hidden; }
+.hero-meter .fill { height: 100%; width: 35%; border-radius: 4px; background: var(--md-sys-color-primary); }
+
+/* Playground */
+.playground { display: grid; gap: var(--sp-4); }
+.play-controls { display: flex; flex-wrap: wrap; gap: var(--sp-4); align-items: center; justify-content: space-between; }
+.compare { display: grid; gap: var(--sp-4); }
+@media (min-width: 840px) { .compare { grid-template-columns: 1fr 1fr; } }
+.compare .card { display: flex; flex-direction: column; gap: var(--sp-3); min-height: 220px; }
+.compare .card header { display: flex; align-items: center; gap: var(--sp-2); }
+.compare .card header .spacer { flex: 1; }
+.answer { font-size: 1.125rem; line-height: 1.75rem; margin: 0; }
+.answer.cjk { font-size: 1.375rem; line-height: 2.25rem; }
+.answer code { font-size: .9em; background: var(--md-sys-color-surface-container-highest); padding: .05em .35em; border-radius: 4px; }
+.card-filled .answer code { background: var(--md-sys-color-surface-container-lowest); }
+.metric-row { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: auto; }
+.badge { display: inline-flex; align-items: center; gap: var(--sp-1); height: 24px; padding: 0 var(--sp-2); border-radius: var(--md-sys-shape-corner-small);
+  font-size: .75rem; font-weight: 500; background: var(--md-sys-color-surface-container-highest); color: var(--md-sys-color-on-surface-variant); }
+.badge.good { background: var(--md-sys-color-tertiary-container); color: var(--md-sys-color-on-tertiary-container); }
+.badge.bad { background: var(--md-sys-color-error-container); color: var(--md-sys-color-on-error-container); }
+.level-desc { color: var(--md-sys-color-on-surface-variant); }
+.fade-swap { animation: fadeSwap var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized-decelerate); }
+@keyframes fadeSwap { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* Install */
+.install-grid { display: grid; gap: var(--sp-4); }
+@media (min-width: 960px) { .install-grid { grid-template-columns: 1.3fr .7fr; } }
+.install-panel { padding: 0; overflow: hidden; }
+.install-panel .panel-body { padding: var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-4); }
+.form-grid { display: grid; gap: var(--sp-4); }
+@media (min-width: 600px) { .form-grid { grid-template-columns: 1fr 1fr; } }
+.explain-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--sp-2); }
+.explain-list li { display: flex; gap: var(--sp-2); align-items: flex-start; color: var(--md-sys-color-on-surface-variant); font-size: .875rem; line-height: 1.25rem; }
+.explain-list li .icon { font-size: 18px; color: var(--md-sys-color-primary); margin-top: 1px; }
+.side-card { display: flex; flex-direction: column; gap: var(--sp-3); }
+.steps { counter-reset: step; list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-4); }
+.steps li { counter-increment: step; display: grid; grid-template-columns: 32px 1fr; gap: var(--sp-3); align-items: start; }
+.steps li::before { content: counter(step); width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); font-weight: 500; font-size: .875rem; }
+
+/* Benchmarks */
+.bench-toolbar { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: center; justify-content: space-between; margin-bottom: var(--sp-4); }
+.bench-list { display: flex; flex-direction: column; gap: 2px; border-radius: var(--md-sys-shape-corner-large); overflow: hidden; }
+.bench-row {
+  display: grid; grid-template-columns: 1fr; gap: var(--sp-2); padding: var(--sp-4) var(--sp-5); background: var(--md-sys-color-surface-container-low);
+}
+@media (min-width: 720px) { .bench-row { grid-template-columns: minmax(200px, 1.1fr) 2fr 72px; align-items: center; gap: var(--sp-5); } }
+.bench-row.avg { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
+.bars { display: flex; flex-direction: column; gap: 6px; }
+.bar { display: grid; grid-template-columns: 1fr 64px; align-items: center; gap: var(--sp-3); font-size: .75rem; font-variant-numeric: tabular-nums; }
+.bar .track { height: 10px; border-radius: 5px; background: transparent; position: relative; }
+.bar .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; width: 0;
+  transition: width var(--md-sys-motion-duration-long2) var(--md-sys-motion-easing-emphasized-decelerate); }
+.bar.normal .fill { background: var(--md-sys-color-outline-variant); }
+.bar.cave .fill { background: var(--md-sys-color-primary); }
+.bar span { color: var(--md-sys-color-on-surface-variant); text-align: right; }
+.saved { font-size: 1.375rem; font-weight: 500; color: var(--md-sys-color-primary); font-variant-numeric: tabular-nums; }
+.bench-row.avg .saved { color: inherit; }
+.legend { display: flex; gap: var(--sp-4); font-size: .75rem; color: var(--md-sys-color-on-surface-variant); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -2px; }
+.compress-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: .875rem; }
+.compress-table th, .compress-table td { text-align: right; padding: var(--sp-3) var(--sp-2); border-bottom: 1px solid var(--md-sys-color-outline-variant); }
+.compress-table th:first-child, .compress-table td:first-child { text-align: left; }
+.compress-table tfoot td { font-weight: 500; border-bottom: 0; }
+.expansion { border-radius: var(--md-sys-shape-corner-large); background: var(--md-sys-color-surface-container-low); margin-top: var(--sp-4); }
+.expansion summary { list-style: none; display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-4) var(--sp-5); cursor: pointer; border-radius: var(--md-sys-shape-corner-large); }
+.expansion summary::-webkit-details-marker { display: none; }
+.expansion summary .chev { margin-left: auto; transition: transform var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard); }
+.expansion[open] summary .chev { transform: rotate(180deg); }
+.expansion .exp-body { padding: 0 var(--sp-5) var(--sp-5); color: var(--md-sys-color-on-surface-variant); }
+.expansion .exp-body p { margin: 0 0 var(--sp-3); }
+
+/* Calculator */
+.calc-grid { display: grid; gap: var(--sp-4); }
+@media (min-width: 960px) { .calc-grid { grid-template-columns: 1fr 1fr; } }
+.calc-inputs { display: flex; flex-direction: column; gap: var(--sp-4); }
+.price-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+.result-card { display: flex; flex-direction: column; gap: var(--sp-4); }
+.verdict { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-4); border-radius: var(--md-sys-shape-corner-large); }
+.verdict.win { background: var(--md-sys-color-tertiary-container); color: var(--md-sys-color-on-tertiary-container); }
+.verdict.lose { background: var(--md-sys-color-error-container); color: var(--md-sys-color-on-error-container); }
+.verdict .icon { font-size: 32px; }
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+.stat { padding: var(--sp-4); border-radius: var(--md-sys-shape-corner-medium); background: var(--md-sys-color-surface-container); }
+.stat .v { font-size: 1.5rem; line-height: 2rem; font-variant-numeric: tabular-nums; }
+.stat .k { font-size: .75rem; color: var(--md-sys-color-on-surface-variant); }
+.small-print { font-size: .75rem; line-height: 1rem; color: var(--md-sys-color-on-surface-variant); }
+
+/* Features */
+.feature-grid { display: grid; gap: var(--sp-4); }
+@media (min-width: 600px) { .feature-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1000px) { .feature-grid { grid-template-columns: repeat(3, 1fr); } }
+.feature { display: flex; flex-direction: column; gap: var(--sp-3); }
+.feature .feat-icon { width: 48px; height: 48px; display: grid; place-items: center; border-radius: var(--md-sys-shape-corner-large);
+  background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); }
+.feature:nth-child(3n+2) .feat-icon { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
+.feature:nth-child(3n) .feat-icon { background: var(--md-sys-color-tertiary-container); color: var(--md-sys-color-on-tertiary-container); }
+.feature code.cmd { font-size: .8125rem; color: var(--md-sys-color-primary); }
+.feature p { margin: 0; color: var(--md-sys-color-on-surface-variant); font-size: .875rem; line-height: 1.25rem; }
+
+/* Honest */
+.honest-grid { display: grid; gap: var(--sp-4); }
+@media (min-width: 840px) { .honest-grid { grid-template-columns: 1fr 1fr; } }
+.honest-grid ul { margin: var(--sp-3) 0 0; padding-left: 1.25rem; display: flex; flex-direction: column; gap: var(--sp-2); }
+.honest-grid .card header { display: flex; align-items: center; gap: var(--sp-2); }
+.win-card { background: var(--md-sys-color-tertiary-container); color: var(--md-sys-color-on-tertiary-container); }
+.lose-card { background: var(--md-sys-color-surface-container-highest); }
+
+/* Footer */
+footer.site-footer { margin-top: var(--sp-10); background: var(--md-sys-color-surface-container-low); padding: var(--sp-8) 0 calc(var(--sp-10) + var(--sp-6)); }
+.footer-grid { display: grid; gap: var(--sp-6); }
+@media (min-width: 720px) { .footer-grid { grid-template-columns: 2fr 1fr 1fr; } }
+.footer-grid h3 { margin-bottom: var(--sp-3); }
+.footer-grid ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+.footer-grid a { color: var(--md-sys-color-on-surface-variant); text-decoration: none; font-size: .875rem; }
+.footer-grid a:hover { color: var(--md-sys-color-primary); text-decoration: underline; }
+
+/* Reveal on scroll */
+.reveal { opacity: 0; transform: translateY(16px); transition: opacity var(--md-sys-motion-duration-long2) var(--md-sys-motion-easing-emphasized-decelerate), transform var(--md-sys-motion-duration-long2) var(--md-sys-motion-easing-emphasized-decelerate); }
+.reveal.visible { opacity: 1; transform: none; }
+.no-js .reveal { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
+  .reveal { opacity: 1; transform: none; }
+}
 </style>
 </head>
-<body>
+<body class="no-js">
+<a class="skip-link" href="#main">Skip to content</a>
 
-<div class="bg-grid"></div>
-<div class="ambient-aura"></div>
-<div class="cursor-glow" id="cursorGlow"></div>
-
-<div class="telemetry-widget">
-  <div>STATUS: <span class="telemetry-val" style="color:#4ade80">OPTIMIZED</span></div>
-  <div>PHYSICAL_IMPACTS: <span class="telemetry-val" id="bonkCount">0</span></div>
-  <div>TOKENS_PURGED: <span class="telemetry-val">65%</span></div>
-</div>
-
-<section class="hero container">
-  <div class="reveal">
-    <a href="https://github.com/JuliusBrussee/caveman" target="_blank" class="hero-repo">
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
-      JuliusBrussee / caveman
+<!-- ============================ Top app bar ============================ -->
+<header class="top-app-bar" id="appBar">
+  <div class="container">
+    <button class="icon-btn state menu-toggle" id="menuToggle" aria-label="Open navigation" aria-controls="navDrawer" aria-expanded="false"><span class="icon">menu</span></button>
+    <a class="brand" href="#top" aria-label="Caveman home">
+      <img src="assets/dancing-rock.svg" alt="" width="32" height="32">
+      <span class="title-large">caveman</span>
     </a>
-    <h1>Few tokens.<br>Do trick.</h1>
-    <p class="hero-subtitle">A semantic constraint engine for Claude Code & Codex. Forces agentic communication into minimal-token lithic structures. Retain 100% technical accuracy while destroying up to 87% of output latency.</p>
-    
-    <div class="cli-install">
-      <span class="cli-prefix">❯</span>
-      <span class="cli-code">npx skills add JuliusBrussee/caveman</span>
-      <button class="cli-btn" onclick="copyInstall(this)">Copy</button>
+    <nav class="nav-links" aria-label="Sections">
+      <a class="state" href="#try">Try it</a>
+      <a class="state" href="#install">Install</a>
+      <a class="state" href="#benchmarks">Benchmarks</a>
+      <a class="state" href="#calculator">Calculator</a>
+      <a class="state" href="#features">Features</a>
+      <a class="state" href="#honest">Honest numbers</a>
+    </nav>
+    <div class="menu-anchor">
+      <button class="icon-btn state" id="themeBtn" aria-label="Theme and color" aria-haspopup="true" aria-expanded="false" aria-controls="themeMenu"><span class="icon">palette</span></button>
+      <div class="menu" id="themeMenu" role="menu" aria-label="Theme">
+        <span class="menu-label label-medium">Theme</span>
+        <button class="menu-item state" role="menuitemradio" data-theme-choice="system" aria-checked="true"><span class="icon">brightness_auto</span>System<span class="icon check">check</span></button>
+        <button class="menu-item state" role="menuitemradio" data-theme-choice="light" aria-checked="false"><span class="icon">light_mode</span>Light<span class="icon check">check</span></button>
+        <button class="menu-item state" role="menuitemradio" data-theme-choice="dark" aria-checked="false"><span class="icon">dark_mode</span>Dark<span class="icon check">check</span></button>
+        <hr>
+        <span class="menu-label label-medium">Dynamic color — pick a seed</span>
+        <div class="swatches" role="radiogroup" aria-label="Seed color" id="swatches"></div>
+      </div>
     </div>
+    <a class="icon-btn state" href="https://github.com/JuliusBrussee/caveman" aria-label="Caveman on GitHub" target="_blank" rel="noopener">
+      <svg width="22" height="22" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    </a>
   </div>
-</section>
+</header>
 
-<div class="marquee">
-  <div class="marquee-content" id="marqueeTrack">
-    </div>
-</div>
+<div class="scrim" id="scrim"></div>
+<nav class="nav-drawer" id="navDrawer" aria-label="Sections">
+  <div class="headline title-small">caveman</div>
+  <a class="state" href="#try"><span class="icon">science</span>Try it</a>
+  <a class="state" href="#install"><span class="icon">download</span>Install</a>
+  <a class="state" href="#benchmarks"><span class="icon">bar_chart</span>Benchmarks</a>
+  <a class="state" href="#calculator"><span class="icon">calculate</span>Calculator</a>
+  <a class="state" href="#features"><span class="icon">widgets</span>Features</a>
+  <a class="state" href="#honest"><span class="icon">balance</span>Honest numbers</a>
+  <a class="state" href="https://github.com/JuliusBrussee/caveman" target="_blank" rel="noopener"><span class="icon">code</span>GitHub</a>
+</nav>
 
-<section class="section container reveal">
-  <span class="section-badge">01 // Compression Matrix</span>
-  <h2 class="section-title">The Lithic Payload Diff</h2>
-  <p class="section-desc">Visualize the exact tokens purged by the Caveman protocol. Technical imperatives are retained; conversational padding is annihilated.</p>
+<main id="main">
+<span id="top"></span>
 
-  <div class="diff-container">
-    <div class="diff-header">
-      <span>Payload: React Re-render Diagnosis</span>
-      <span style="color: var(--text-primary);">69 Tokens → 19 Tokens</span>
-    </div>
-    <div class="diff-body" id="diffBody">
-      <span class="diff-strike">"The reason your React component is re-rendering is likely because you're creating a</span> <span class="diff-keep">New</span> object ref<span class="diff-keep">erence on</span> each render <span class="diff-strike">cycle. When you pass an</span> inline object <span class="diff-strike">as a</span> prop<span class="diff-strike">, React's shallow comparison sees it as a different object every time, which triggers a</span> = new ref = re-render. <span class="diff-strike">I'd recommend using</span> <span class="diff-keep">Wrap in <code>useMemo</code></span><span class="diff-strike"> to memoize the object."</span>
-    </div>
-    <div class="diff-toggle">
-      <button class="toggle-btn active" onclick="setDiffMode('diff', this)">View Diff</button>
-      <button class="toggle-btn" onclick="setDiffMode('caveman', this)">Output Only</button>
-    </div>
-  </div>
-</section>
-
-<section class="section container reveal">
-  <span class="section-badge">02 // Empirical Data</span>
-  <h2 class="section-title">Token Latency Reduction</h2>
-  <p class="section-desc">Average reduction of 65% across standard software engineering tasks. Reasoning tokens remain unaffected; only the output payload is compressed.</p>
-
-  <div class="viz-container">
-    <div class="viz-row">
-      <div class="viz-label">Explain React re-render bug</div>
-      <div class="viz-track-container">
-        <div class="viz-track"><div class="viz-fill" style="width: 13.4%;"></div></div>
-        <div class="viz-stats"><span>159/1180</span> 87%</div>
+<!-- ============================ Hero ============================ -->
+<section class="hero">
+  <div class="container hero-grid">
+    <div class="reveal">
+      <span class="tagline label-large"><span class="icon filled" style="font-size:18px">bolt</span>why use many token when few do trick</span>
+      <h1 class="display-large">Few tokens.<br>Do trick.</h1>
+      <p class="lede">Make your AI coding agent talk like a caveman. Same answers, <strong>65% fewer output tokens</strong>. Brain still big. Mouth small. Code, commands, and errors stay byte-for-byte exact.</p>
+      <div class="hero-actions">
+        <a class="btn btn-filled lg state" href="#install"><span class="icon">download</span>Install in 30 seconds</a>
+        <a class="btn btn-outlined lg state" href="#try"><span class="icon">play_arrow</span>See it grunt</a>
+      </div>
+      <div class="chip-set" aria-label="Highlights">
+        <span class="chip assist"><span class="icon">compress</span>65% fewer output tokens</span>
+        <span class="chip assist"><span class="icon">hub</span>30+ agents</span>
+        <span class="chip assist"><span class="icon">tune</span>6 grunt levels</span>
+        <span class="chip assist"><span class="icon">translate</span>Keeps your language</span>
       </div>
     </div>
-    <div class="viz-row">
-      <div class="viz-label">Fix auth token expiry</div>
-      <div class="viz-track-container">
-        <div class="viz-track"><div class="viz-fill" style="width: 17.1%;"></div></div>
-        <div class="viz-stats"><span>121/704</span> 83%</div>
+    <div class="hero-visual reveal" aria-label="Example: normal answer vs caveman answer">
+      <div class="bubble normal">
+        <div class="who label-medium"><span class="icon" style="font-size:18px">record_voice_over</span>Normal agent · 69 tokens</div>
+        <p class="body-medium" style="margin:0">The reason your React component is re-rendering is likely because you're creating a new object reference on each render cycle. When you pass an inline object as a prop, React's shallow comparison sees it as a different object every time, which triggers a re-render. I'd recommend using useMemo to memoize the object.</p>
       </div>
-    </div>
-    <div class="viz-row">
-      <div class="viz-label">Debug PostgreSQL race condition</div>
-      <div class="viz-track-container">
-        <div class="viz-track"><div class="viz-fill" style="width: 19.3%;"></div></div>
-        <div class="viz-stats"><span>232/1200</span> 81%</div>
+      <div class="bubble cave">
+        <div class="who label-medium"><img src="assets/dancing-rock.svg" width="18" height="18" alt="">Caveman agent · 19 tokens</div>
+        <p class="body-large" style="margin:0">New object ref each render. Inline object prop = new ref = re-render. Wrap in <code>useMemo</code>.</p>
       </div>
-    </div>
-    <div class="viz-row">
-      <div class="viz-label">Explain git rebase vs merge</div>
-      <div class="viz-track-container">
-        <div class="viz-track"><div class="viz-fill" style="width: 41.5%;"></div></div>
-        <div class="viz-stats"><span>292/702</span> 58%</div>
-      </div>
-    </div>
-    <div class="viz-row">
-      <div class="viz-label">Review PR for security</div>
-      <div class="viz-track-container">
-        <div class="viz-track"><div class="viz-fill" style="width: 58.7%;"></div></div>
-        <div class="viz-stats"><span>398/678</span> 41%</div>
+      <div class="hero-meter label-medium" aria-hidden="true">
+        <span>tokens</span><div class="track"><div class="fill" style="width:27.5%"></div></div><span>19 / 69</span>
       </div>
     </div>
   </div>
 </section>
 
-<section class="section container reveal">
-  <span class="section-badge">03 // Lexical Ruleset</span>
-  <h2 class="section-title">Execution Architecture</h2>
-  
-  <div class="bento-grid">
-    <div class="bento-box bento-large">
-      <div class="bento-icon">💀</div>
-      <div class="bento-title">Pleasantry Annihilation</div>
-      <div class="bento-desc">Standard LLMs waste compute on sycophantic hedging: "I'd be happy to help," or "It might be worth considering." Caveman protocol identifies and destroys these patterns at the generation layer.</div>
+<!-- ============================ Playground ============================ -->
+<section class="block" id="try" style="background:var(--md-sys-color-surface-container-low)">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow label-large"><span class="icon">science</span>Pick your grunt</span>
+      <h2 class="headline-large">Same answer. Six sizes.</h2>
+      <p class="body-large">Switch any time with <code class="inline-code">/caveman &lt;level&gt;</code>. Level sticks until you change it or the session ends. Caveman answers below are the real examples from the skill file.</p>
     </div>
-    <div class="bento-box">
-      <div class="bento-icon">✍️</div>
-      <div class="bento-title">Code Preservation</div>
-      <div class="bento-desc">Code blocks, Git commits, and PR descriptions bypass the lithic filter. Caveman writes normal code.</div>
-    </div>
-    <div class="bento-box">
-      <div class="bento-icon">🧠</div>
-      <div class="bento-title">Nomenclature Integrity</div>
-      <div class="bento-desc">Technical jargon is retained precisely. "Polymorphism" remains "polymorphism." Caveman not stupid. Caveman efficient.</div>
-    </div>
-    <div class="bento-box bento-large">
-      <div class="bento-icon">🔬</div>
-      <div class="bento-title">Scientific Backing</div>
-      <div class="bento-desc">Based on the March 2026 paper <em>"Brevity Constraints Reverse Performance Hierarchies in Language Models"</em>. Forcing brevity improves accuracy by 26 percentage points on key benchmarks. Less word = more correct.</div>
+
+    <div class="playground reveal">
+      <div class="play-controls">
+        <div class="field">
+          <span class="label-medium on-surface-variant" id="qLabel">Question</span>
+          <div class="segmented" role="radiogroup" aria-labelledby="qLabel" id="questionSeg"></div>
+        </div>
+        <div class="field">
+          <span class="label-medium on-surface-variant" id="lvlLabel">Level</span>
+          <div class="segmented" role="radiogroup" aria-labelledby="lvlLabel" id="levelSeg"></div>
+        </div>
+      </div>
+
+      <div class="compare">
+        <article class="card card-outlined">
+          <header><span class="icon on-surface-variant">record_voice_over</span><h3 class="title-medium">Normal agent</h3><span class="spacer"></span></header>
+          <p class="answer on-surface-variant" id="normalAnswer"></p>
+          <div class="metric-row" id="normalMetrics"></div>
+        </article>
+        <article class="card card-filled">
+          <header><img src="assets/dancing-rock.svg" width="24" height="24" alt=""><h3 class="title-medium" id="caveTitle">Caveman</h3><span class="spacer"></span>
+            <button class="icon-btn state" id="copyAnswer" aria-label="Copy caveman answer"><span class="icon">content_copy</span></button></header>
+          <p class="answer" id="caveAnswer"></p>
+          <div class="metric-row" id="caveMetrics"></div>
+        </article>
+      </div>
+      <p class="body-medium level-desc" id="levelDesc"></p>
+      <p class="small-print">Counts here are words or characters, measured live in your browser. They illustrate the style — the token numbers come from the real API runs in <a href="#benchmarks">Benchmarks</a>.</p>
     </div>
   </div>
 </section>
 
-<section class="section container reveal">
-  <span class="section-badge">04 // Interface</span>
-  <h2 class="section-title">Initialize Protocol</h2>
-  
-  <div class="glass-terminal">
-    <div class="term-header">
-      <div class="term-dot"></div><div class="term-dot"></div><div class="term-dot"></div>
+<!-- ============================ Install ============================ -->
+<section class="block" id="install">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow label-large"><span class="icon">download</span>Install</span>
+      <h2 class="headline-large">One rock. That it.</h2>
+      <p class="body-large">One command finds every agent on your machine and installs caveman for each one. ~30 seconds. Needs Node 18 or newer. Skips agents you no have. Safe to re-run.</p>
     </div>
-    <div class="term-body" id="termBody">
-      <div class="term-line">System ready. Establishing connection to Claude Code Env...</div>
-      <div class="term-line">Installing plugins via marketplace...</div>
-      <div class="term-line term-accent">claude plugin install caveman@caveman</div>
-      <div class="term-line" style="margin-top: 16px;">Trigger the protocol:</div>
-      <div class="term-line term-accent">/caveman</div>
-      <div class="term-line">Me ready.</div>
-      
-      <div class="term-input-row">
-        <span class="term-accent">❯</span>
-        <input class="term-input" id="cli-input" type="text" autocomplete="off" spellcheck="false" placeholder="Enter prompt or impact surface anywhere to bonk...">
+
+    <div class="install-grid reveal">
+      <div class="card card-elevated install-panel">
+        <div class="tabs" role="tablist" aria-label="Install method" id="installTabs">
+          <button class="tab state" role="tab" aria-selected="true" aria-controls="panel-auto" id="tab-auto" data-tab="auto"><span class="icon">auto_awesome</span>Everything</button>
+          <button class="tab state" role="tab" aria-selected="false" aria-controls="panel-custom" id="tab-custom" data-tab="custom" tabindex="-1"><span class="icon">tune</span>Build my command</button>
+          <button class="tab state" role="tab" aria-selected="false" aria-controls="panel-remove" id="tab-remove" data-tab="remove" tabindex="-1"><span class="icon">delete</span>Uninstall</button>
+        </div>
+
+        <div class="panel-body" role="tabpanel" id="panel-auto" aria-labelledby="tab-auto">
+          <div class="field">
+            <span class="label-medium on-surface-variant" id="osLabel">Your computer</span>
+            <div class="segmented" role="radiogroup" aria-labelledby="osLabel" id="osSeg">
+              <button role="radio" aria-checked="true" data-os="unix" class="state"><span class="icon">check</span>macOS · Linux · WSL</button>
+              <button role="radio" aria-checked="false" data-os="win" class="state"><span class="icon">check</span>Windows</button>
+            </div>
+          </div>
+          <div class="code"><pre id="autoCmd"></pre><button class="icon-btn state" data-copy-from="autoCmd" aria-label="Copy command"><span class="icon">content_copy</span></button></div>
+          <ul class="explain-list">
+            <li><span class="icon">terminal</span><span id="autoHint">Open Terminal, paste, press Enter.</span></li>
+            <li><span class="icon">verified</span><span>Claude Code, Codex and Gemini: already on from the first message. No command needed.</span></li>
+            <li><span class="icon">chat</span><span>Everywhere else: type <code class="inline-code">/caveman</code> or say <em>"talk like caveman"</em>. Say <em>"normal mode"</em> to stop.</span></li>
+          </ul>
+        </div>
+
+        <div class="panel-body" role="tabpanel" id="panel-custom" aria-labelledby="tab-custom" hidden>
+          <div class="form-grid">
+            <div class="field">
+              <label class="label-medium" for="agentSelect">Agent</label>
+              <select class="select" id="agentSelect"></select>
+              <span class="supporting label-medium" id="agentMech"></span>
+            </div>
+            <div class="field">
+              <span class="label-medium on-surface-variant" id="hooksLabel">Setup size</span>
+              <div class="segmented" role="radiogroup" aria-labelledby="hooksLabel" id="sizeSeg">
+                <button role="radio" aria-checked="true" data-size="default" class="state"><span class="icon">check</span>Default</button>
+                <button role="radio" aria-checked="false" data-size="minimal" class="state"><span class="icon">check</span>Minimal</button>
+                <button role="radio" aria-checked="false" data-size="all" class="state"><span class="icon">check</span>Everything</button>
+              </div>
+              <span class="supporting label-medium" id="sizeHint"></span>
+            </div>
+          </div>
+          <div class="field">
+            <span class="label-medium on-surface-variant">Extras</span>
+            <div class="chip-set" id="flagChips">
+              <button class="chip state" aria-pressed="false" data-flag="--with-init"><span class="icon chip-check">check</span>Rule files for this repo</button>
+              <button class="chip state" aria-pressed="false" data-flag="--dry-run"><span class="icon chip-check">check</span>Dry run (change nothing)</button>
+              <button class="chip state" aria-pressed="false" data-flag="--force"><span class="icon chip-check">check</span>Force re-install</button>
+            </div>
+          </div>
+          <div class="code"><pre id="customCmd"></pre><button class="icon-btn state" data-copy-from="customCmd" aria-label="Copy command"><span class="icon">content_copy</span></button></div>
+          <ul class="explain-list" id="customExplain"></ul>
+        </div>
+
+        <div class="panel-body" role="tabpanel" id="panel-remove" aria-labelledby="tab-remove" hidden>
+          <p class="body-medium on-surface-variant" style="margin:0">Want the rock gone? This removes caveman hooks, the Claude Code plugin and the Gemini extension. Skills added through <code class="inline-code">npx skills add</code> are removed from your editor's skill manager.</p>
+          <div class="code"><pre id="removeCmd">npx -y github:JuliusBrussee/caveman -- --uninstall</pre><button class="icon-btn state" data-copy-from="removeCmd" aria-label="Copy command"><span class="icon">content_copy</span></button></div>
+        </div>
+      </div>
+
+      <aside class="card card-filled side-card" aria-label="How to use">
+        <h3 class="title-large">After install</h3>
+        <ol class="steps body-medium">
+          <li><div><strong>Turn it on.</strong><br><span class="on-surface-variant">Type <code class="inline-code">/caveman</code> or say "talk like caveman".</span></div></li>
+          <li><div><strong>Pick a level.</strong><br><span class="on-surface-variant"><code class="inline-code">/caveman lite</code>, <code class="inline-code">ultra</code>, or <code class="inline-code">wenyan</code>.</span></div></li>
+          <li><div><strong>Check the savings.</strong><br><span class="on-surface-variant"><code class="inline-code">/caveman-stats</code> reads your real session log.</span></div></li>
+          <li><div><strong>Turn it off.</strong><br><span class="on-surface-variant">Say "normal mode" or "stop caveman".</span></div></li>
+        </ol>
+        <a class="btn btn-text state" href="https://github.com/JuliusBrussee/caveman/blob/main/INSTALL.md" target="_blank" rel="noopener"><span class="icon">open_in_new</span>Full install guide</a>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ Benchmarks ============================ -->
+<section class="block" id="benchmarks" style="background:var(--md-sys-color-surface-container-low)">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow label-large"><span class="icon">bar_chart</span>Benchmarks</span>
+      <h2 class="headline-large">Real counts. Real API.</h2>
+      <p class="body-large">Output tokens from the Claude API across 10 prompts. Average <strong>65%</strong> cut, range 22–87%. Committed and reproducible in <a href="https://github.com/JuliusBrussee/caveman/tree/main/benchmarks" target="_blank" rel="noopener">benchmarks/</a>.</p>
+    </div>
+    <div class="bench-toolbar reveal">
+      <div class="legend"><span><i style="background:var(--md-sys-color-outline-variant)"></i>Normal</span><span><i style="background:var(--md-sys-color-primary)"></i>Caveman</span></div>
+      <div class="chip-set" role="radiogroup" aria-label="Sort benchmarks" id="sortChips">
+        <button class="chip state" role="radio" aria-checked="true" data-sort="original"><span class="icon">list</span>Original order</button>
+        <button class="chip state" role="radio" aria-checked="false" data-sort="saved"><span class="icon">trending_down</span>Most saved</button>
+        <button class="chip state" role="radio" aria-checked="false" data-sort="normal"><span class="icon">notes</span>Longest answer</button>
+      </div>
+    </div>
+    <div class="bench-list reveal" id="benchList" role="list"></div>
+
+    <details class="expansion reveal">
+      <summary class="state"><span class="icon">description</span><span class="title-medium">caveman-compress receipts — memory files, smaller every session</span><span class="icon chev">expand_more</span></summary>
+      <div class="exp-body">
+        <p class="body-medium">Real memory files rewritten by <code class="inline-code">/caveman-compress</code>. Every session after, the file loads smaller. Input tokens saved forever, not just one reply.</p>
+        <div style="overflow-x:auto"><table class="compress-table" id="compressTable"></table></div>
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- ============================ Calculator ============================ -->
+<section class="block" id="calculator">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow label-large"><span class="icon">calculate</span>Worth it for you?</span>
+      <h2 class="headline-large">Honest savings calculator</h2>
+      <p class="body-large">Caveman shrinks <em>output</em>. The rules it loads cost ~1–1.5k <em>input</em> tokens every turn. Short answers can mean you pay to use it. Put in your numbers and see.</p>
+    </div>
+    <div class="calc-grid reveal">
+      <div class="card card-outlined calc-inputs">
+        <div class="field">
+          <label class="label-large" for="cOut">Normal answer length (output tokens per reply)</label>
+          <div class="slider-row"><input type="range" id="cOut" min="50" max="4000" step="1" value="1214"><output for="cOut" id="cOutV" class="title-medium">1214</output></div>
+          <span class="supporting label-medium">Benchmark average without caveman: 1214.</span>
+        </div>
+        <div class="field">
+          <label class="label-large" for="cCut">Output cut</label>
+          <div class="slider-row"><input type="range" id="cCut" min="0" max="90" step="1" value="65"><output for="cCut" id="cCutV" class="title-medium">65%</output></div>
+          <span class="supporting label-medium">Measured range 22–87%, average 65%.</span>
+        </div>
+        <div class="field">
+          <label class="label-large" for="cOver">Rules overhead (input tokens per turn)</label>
+          <div class="slider-row"><input type="range" id="cOver" min="0" max="2000" step="50" value="1250"><output for="cOver" id="cOverV" class="title-medium">1250</output></div>
+          <span class="supporting label-medium">~1–1.5k measured. Prompt caching can make it cheaper — enter your cached input price below.</span>
+        </div>
+        <div class="field">
+          <label class="label-large" for="cTurns">Replies per day</label>
+          <div class="slider-row"><input type="range" id="cTurns" min="1" max="500" step="1" value="100"><output for="cTurns" id="cTurnsV" class="title-medium">100</output></div>
+        </div>
+        <div class="price-row">
+          <div class="field"><label class="label-medium" for="cPin">Input $ / 1M tokens</label><input class="input" id="cPin" type="number" min="0" step="0.01" value="3" inputmode="decimal"></div>
+          <div class="field"><label class="label-medium" for="cPout">Output $ / 1M tokens</label><input class="input" id="cPout" type="number" min="0" step="0.01" value="15" inputmode="decimal"></div>
+        </div>
+        <span class="small-print">Prices are example values. Use your provider's current price page. Pay per request (like Copilot premium requests)? Shorter answers are the same request — caveman can't lower that bill.</span>
+      </div>
+
+      <div class="card card-elevated result-card" aria-live="polite">
+        <div class="verdict" id="verdict"><span class="icon filled" id="verdictIcon">savings</span><div><div class="title-large" id="verdictTitle"></div><div class="body-medium" id="verdictSub"></div></div></div>
+        <div class="stat-grid">
+          <div class="stat"><div class="v" id="sOutSaved"></div><div class="k">output tokens saved / reply</div></div>
+          <div class="stat"><div class="v" id="sInAdded"></div><div class="k">input tokens added / reply</div></div>
+          <div class="stat"><div class="v" id="sDay"></div><div class="k">net $ per day</div></div>
+          <div class="stat"><div class="v" id="sMonth"></div><div class="k">net $ per 30 days</div></div>
+        </div>
+        <div class="field">
+          <span class="label-medium on-surface-variant">Break-even answer length at these prices</span>
+          <div class="title-medium" id="sBreak"></div>
+        </div>
+        <p class="small-print">Math: saved = length × cut × output price. Cost = overhead × input price. Session-level measurements land around 14–21% total savings on output-heavy work — lower than the output headline because input dominates agentic sessions. Faster reading is free either way.</p>
       </div>
     </div>
   </div>
 </section>
 
-<footer class="footer">
-  <div>Built by <a href="https://github.com/JuliusBrussee" target="_blank">Julius Brussee</a>. See also: <a href="https://revu.cards" target="_blank">Revu</a>.</div>
-  <div>MIT License. Operational.</div>
+<!-- ============================ Features ============================ -->
+<section class="block" id="features" style="background:var(--md-sys-color-surface-container-low)">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow label-large"><span class="icon">widgets</span>What you get</span>
+      <h2 class="headline-large">Whole cave of tools</h2>
+      <p class="body-large">Caveman no make brain smaller. Caveman make <em>mouth</em> smaller. Plus a few helpers.</p>
+    </div>
+    <div class="feature-grid" id="featureGrid"></div>
+  </div>
+</section>
+
+<!-- ============================ Honest numbers ============================ -->
+<section class="block" id="honest">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow label-large"><span class="icon">balance</span>Honest numbers</span>
+      <h2 class="headline-large">When rock win. When rock lose.</h2>
+      <p class="body-large">No marketing. If caveman loses for your workload, turn it off. Wanting the rock to work does not make the rock work.</p>
+    </div>
+    <div class="honest-grid reveal">
+      <article class="card win-card">
+        <header><span class="icon filled">thumb_up</span><h3 class="title-large">Caveman wins</h3></header>
+        <ul class="body-medium">
+          <li><strong>Long, chatty answers</strong> — explanations, reviews, debugging walk-throughs over ~1.5–2k output tokens.</li>
+          <li><strong>Long sessions</strong> — per-reply savings add up, the rule cost stays flat.</li>
+          <li><strong>Reading speed</strong> — shorter replies finish sooner and read faster. Often the real win.</li>
+        </ul>
+      </article>
+      <article class="card lose-card">
+        <header><span class="icon filled">thumb_down</span><h3 class="title-large">Caveman loses</h3></header>
+        <ul class="body-medium on-surface-variant">
+          <li><strong>Already-short Q&amp;A</strong> — saving 70–100 output tokens while adding ~1k input per turn is a net loss.</li>
+          <li><strong>Pay-per-request agents</strong> — a shorter answer is still the same request.</li>
+          <li><strong>Some tool-side counters</strong> — rule re-injection and retries can swamp the savings. Always A/B.</li>
+        </ul>
+      </article>
+    </div>
+    <div class="reveal" style="margin-top:var(--sp-5); display:flex; flex-wrap:wrap; gap:var(--sp-3)">
+      <a class="btn btn-tonal state" href="https://github.com/JuliusBrussee/caveman/blob/main/docs/HONEST-NUMBERS.md" target="_blank" rel="noopener"><span class="icon">article</span>Read the full breakdown</a>
+      <a class="btn btn-text state" href="https://arxiv.org/abs/2604.00025" target="_blank" rel="noopener"><span class="icon">school</span>Brevity paper (March 2026)</a>
+    </div>
+
+    <details class="expansion reveal"><summary class="state"><span class="icon">help</span><span class="title-medium">Does caveman make answers dumber?</span><span class="icon chev">expand_more</span></summary>
+      <div class="exp-body"><p class="body-medium">No. It changes how the agent <em>talks</em>, not what it knows. Technical terms, code blocks, commands and error messages stay exact. A March 2026 paper tested 31 models and found brevity limits improved accuracy by ~26 points on some benchmarks.</p></div></details>
+    <details class="expansion reveal"><summary class="state"><span class="icon">help</span><span class="title-medium">What about security warnings or risky commands?</span><span class="icon chev">expand_more</span></summary>
+      <div class="exp-body"><p class="body-medium">Caveman switches back to normal, clear sentences for security warnings, irreversible actions, and step-by-step instructions where short fragments could be misread. Then it resumes.</p></div></details>
+    <details class="expansion reveal"><summary class="state"><span class="icon">help</span><span class="title-medium">I don't write in English. Does it work?</span><span class="icon chev">expand_more</span></summary>
+      <div class="exp-body"><p class="body-medium">Yes. Write Portuguese, caveman grunts Portuguese. Spanish, French, Turkish — same. It compresses the style and never translates. <code class="inline-code">wenyan</code> mode is the one exception on purpose: classical Chinese packs the most meaning per token.</p></div></details>
+    <details class="expansion reveal"><summary class="state"><span class="icon">help</span><span class="title-medium">Install broke. Now what?</span><span class="icon chev">expand_more</span></summary>
+      <div class="exp-body"><p class="body-medium">Open your agent inside the caveman repo and say: <em>"Read CLAUDE.md and INSTALL.md, install caveman for me."</em> Agent read repo, agent fix own brain. Still stuck? <a href="https://github.com/JuliusBrussee/caveman/issues" target="_blank" rel="noopener">Open an issue</a>.</p></div></details>
+  </div>
+</section>
+</main>
+
+<a class="fab state hidden" id="fab" href="#install" aria-label="Jump to install"><span class="icon">download</span>Install</a>
+<div class="snackbar" id="snackbar" role="status" aria-live="polite"></div>
+
+<footer class="site-footer">
+  <div class="container footer-grid">
+    <div>
+      <a class="brand" href="#top"><img src="assets/dancing-rock.svg" alt="" width="32" height="32"><span class="title-large">caveman</span></a>
+      <p class="body-medium on-surface-variant" style="margin-top:var(--sp-3); max-width:420px">Built by <a href="https://github.com/JuliusBrussee" target="_blank" rel="noopener">Julius Brussee</a>. MIT License. Cost go down forever.</p>
+    </div>
+    <div>
+      <h3 class="title-small">Project</h3>
+      <ul>
+        <li><a href="https://github.com/JuliusBrussee/caveman" target="_blank" rel="noopener">GitHub</a></li>
+        <li><a href="https://github.com/JuliusBrussee/caveman/blob/main/INSTALL.md" target="_blank" rel="noopener">Install guide</a></li>
+        <li><a href="install-windows.md">Windows notes</a></li>
+        <li><a href="https://github.com/JuliusBrussee/caveman/issues" target="_blank" rel="noopener">Issues</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3 class="title-small">Numbers</h3>
+      <ul>
+        <li><a href="HONEST-NUMBERS.md">Honest numbers</a></li>
+        <li><a href="https://github.com/JuliusBrussee/caveman/tree/main/benchmarks" target="_blank" rel="noopener">Benchmarks</a></li>
+        <li><a href="https://github.com/JuliusBrussee/caveman/tree/main/evals" target="_blank" rel="noopener">Evals</a></li>
+      </ul>
+    </div>
+  </div>
 </footer>
 
+<!--
+  Site data. tests/test_docs_site.js checks this block against README.md
+  (benchmark + compress tables) and bin/install.js (PROVIDERS) so the site
+  can never drift from the real numbers or the real agent list.
+-->
+<script type="application/json" id="site-data">
+{
+  "benchmarks": [
+    { "task": "Explain React re-render bug", "normal": 1180, "caveman": 159, "saved": 87 },
+    { "task": "Fix auth middleware token expiry", "normal": 704, "caveman": 121, "saved": 83 },
+    { "task": "Set up PostgreSQL connection pool", "normal": 2347, "caveman": 380, "saved": 84 },
+    { "task": "Explain git rebase vs merge", "normal": 702, "caveman": 292, "saved": 58 },
+    { "task": "Refactor callback to async/await", "normal": 387, "caveman": 301, "saved": 22 },
+    { "task": "Architecture: microservices vs monolith", "normal": 446, "caveman": 310, "saved": 30 },
+    { "task": "Review PR for security issues", "normal": 678, "caveman": 398, "saved": 41 },
+    { "task": "Docker multi-stage build", "normal": 1042, "caveman": 290, "saved": 72 },
+    { "task": "Debug PostgreSQL race condition", "normal": 1200, "caveman": 232, "saved": 81 },
+    { "task": "Implement React error boundary", "normal": 3454, "caveman": 456, "saved": 87 }
+  ],
+  "benchmarkAverage": { "normal": 1214, "caveman": 294, "saved": 65 },
+  "compress": [
+    { "file": "claude-md-preferences.md", "original": 706, "compressed": 285, "saved": "59.6%" },
+    { "file": "project-notes.md", "original": 1145, "compressed": 535, "saved": "53.3%" },
+    { "file": "claude-md-project.md", "original": 1122, "compressed": 636, "saved": "43.3%" },
+    { "file": "todo-list.md", "original": 627, "compressed": 388, "saved": "38.1%" },
+    { "file": "mixed-with-code.md", "original": 888, "compressed": 560, "saved": "36.9%" }
+  ],
+  "compressAverage": { "original": 898, "compressed": 481, "saved": "46%" },
+  "agents": [
+    { "id": "claude", "label": "Claude Code", "mech": "claude plugin install" },
+    { "id": "gemini", "label": "Gemini CLI", "mech": "gemini extensions install" },
+    { "id": "opencode", "label": "opencode", "mech": "native opencode plugin" },
+    { "id": "openclaw", "label": "OpenClaw", "mech": "workspace skill + SOUL.md" },
+    { "id": "codex", "label": "Codex CLI", "mech": "npx skills add (codex)" },
+    { "id": "cursor", "label": "Cursor", "mech": "npx skills add (cursor)" },
+    { "id": "windsurf", "label": "Windsurf", "mech": "npx skills add (windsurf)" },
+    { "id": "cline", "label": "Cline", "mech": "npx skills add (cline)" },
+    { "id": "continue", "label": "Continue", "mech": "npx skills add (continue)" },
+    { "id": "kilo", "label": "Kilo Code", "mech": "npx skills add (kilo)" },
+    { "id": "roo", "label": "Roo Code", "mech": "npx skills add (roo)" },
+    { "id": "augment", "label": "Augment Code", "mech": "npx skills add (augment)" },
+    { "id": "copilot", "label": "GitHub Copilot", "mech": "npx skills add (github-copilot)" },
+    { "id": "hermes", "label": "Hermes Agent", "mech": "native hermes skills copy" },
+    { "id": "aider-desk", "label": "Aider Desk", "mech": "npx skills add (aider-desk)" },
+    { "id": "amp", "label": "Sourcegraph Amp", "mech": "npx skills add (amp)" },
+    { "id": "bob", "label": "IBM Bob", "mech": "npx skills add (bob)" },
+    { "id": "crush", "label": "Crush", "mech": "npx skills add (crush)" },
+    { "id": "devin", "label": "Devin (terminal)", "mech": "npx skills add (devin)" },
+    { "id": "droid", "label": "Droid (Factory)", "mech": "npx skills add (droid)" },
+    { "id": "forgecode", "label": "ForgeCode", "mech": "npx skills add (forgecode)" },
+    { "id": "goose", "label": "Block Goose", "mech": "npx skills add (goose)" },
+    { "id": "iflow", "label": "iFlow CLI", "mech": "npx skills add (iflow-cli)" },
+    { "id": "kiro", "label": "Kiro CLI", "mech": "npx skills add (kiro-cli)" },
+    { "id": "mistral", "label": "Mistral Vibe", "mech": "npx skills add (mistral-vibe)" },
+    { "id": "openhands", "label": "OpenHands", "mech": "npx skills add (openhands)" },
+    { "id": "qwen", "label": "Qwen Code", "mech": "npx skills add (qwen-code)" },
+    { "id": "rovodev", "label": "Atlassian Rovo Dev", "mech": "npx skills add (rovodev)" },
+    { "id": "tabnine", "label": "Tabnine CLI", "mech": "npx skills add (tabnine-cli)" },
+    { "id": "trae", "label": "Trae", "mech": "npx skills add (trae)" },
+    { "id": "warp", "label": "Warp", "mech": "npx skills add (warp)" },
+    { "id": "replit", "label": "Replit Agent", "mech": "npx skills add (replit)" },
+    { "id": "junie", "label": "JetBrains Junie", "mech": "npx skills add (junie)" },
+    { "id": "qoder", "label": "Qoder", "mech": "npx skills add (qoder)" },
+    { "id": "antigravity", "label": "Google Antigravity", "mech": "npx skills add (antigravity)" }
+  ]
+}
+</script>
+
 <script>
-// --- Ambient Cursor Glow ---
-const glow = document.getElementById('cursorGlow');
-document.addEventListener('mousemove', (e) => {
-  glow.style.transform = `translate(calc(${e.clientX}px - 50%), calc(${e.clientY}px - 50%))`;
-});
-
-// --- Marquee Population ---
-const items = [
-  { k: "TOKENS_SAVED", v: "65%" }, { k: "ACCURACY", v: "100%" },
-  { k: "LATENCY_DROP", v: "3x" }, { k: "VIBES", v: "OOG" },
-  { k: "PRICE", v: "$0.00" }, { k: "DEPENDENCIES", v: "NONE" }
-];
-const track = document.getElementById('marqueeTrack');
-const marqueeHTML = [...items, ...items, ...items].map(i => `<div class="marquee-item">${i.k}<span>${i.v}</span></div>`).join('');
-track.innerHTML = marqueeHTML;
-
-// --- Copy Install ---
-function copyInstall(btn) {
-  navigator.clipboard.writeText('npx skills add JuliusBrussee/caveman');
-  btn.textContent = 'Copied';
-  btn.style.background = 'var(--accent)';
-  btn.style.color = '#000';
-  setTimeout(() => {
-    btn.textContent = 'Copy';
-    btn.style.background = 'var(--text-primary)';
-  }, 2000);
-}
-
-// --- Diff Toggle ---
-function setDiffMode(mode, btn) {
-  document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  const body = document.getElementById('diffBody');
-  
-  if (mode === 'diff') {
-    body.innerHTML = `<span class="diff-strike">"The reason your React component is re-rendering is likely because you're creating a</span> <span class="diff-keep">New</span> object ref<span class="diff-keep">erence on</span> each render <span class="diff-strike">cycle. When you pass an</span> inline object <span class="diff-strike">as a</span> prop<span class="diff-strike">, React's shallow comparison sees it as a different object every time, which triggers a</span> = new ref = re-render. <span class="diff-strike">I'd recommend using</span> <span class="diff-keep">Wrap in <code>useMemo</code></span><span class="diff-strike"> to memoize the object."</span>`;
-  } else {
-    body.innerHTML = `<span class="diff-keep">"New object ref each render. Inline object prop = new ref = re-render. Wrap in <code>useMemo</code>."</span>`;
+(function () {
+  'use strict';
+  document.body.classList.remove('no-js');
+  var DATA = JSON.parse(document.getElementById('site-data').textContent);
+  var REPO = 'JuliusBrussee/caveman';
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { return null; } }
+  function el(tag, attrs, kids) {
+    var n = document.createElement(tag);
+    Object.keys(attrs || {}).forEach(function (k) {
+      if (k === 'text') n.textContent = attrs[k];
+      else if (k === 'class') n.className = attrs[k];
+      else n.setAttribute(k, attrs[k]);
+    });
+    (kids || []).forEach(function (c) { if (c) n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+    return n;
   }
-}
+  function icon(name, cls) { return el('span', { class: 'icon' + (cls ? ' ' + cls : ''), 'aria-hidden': 'true', text: name }); }
+  var fmt = new Intl.NumberFormat('en-US');
 
-// --- Stealth Bonk System ---
-let bonkCount = 0;
-const bonkVal = document.getElementById('bonkCount');
-document.addEventListener('click', (e) => {
-  // Prevent bonk on interactive elements
-  if(e.target.closest('a') || e.target.closest('button') || e.target.closest('input')) return;
-  
-  bonkCount++;
-  bonkVal.textContent = bonkCount;
-  bonkVal.classList.add('bonk-flash');
-  setTimeout(() => bonkVal.classList.remove('bonk-flash'), 150);
-});
+  /* ---------- Ripple ---------- */
+  document.addEventListener('pointerdown', function (e) {
+    var host = e.target.closest('.state');
+    if (!host || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var r = host.getBoundingClientRect(), size = Math.max(r.width, r.height) * 2.2;
+    var dot = el('span', { class: 'ripple' });
+    dot.style.width = dot.style.height = size + 'px';
+    dot.style.left = (e.clientX - r.left - size / 2) + 'px';
+    dot.style.top = (e.clientY - r.top - size / 2) + 'px';
+    host.appendChild(dot);
+    setTimeout(function () { dot.remove(); }, 500);
+  });
 
-// --- CLI Interactions ---
-const cliInput = document.getElementById('cli-input');
-const termBody = document.getElementById('termBody');
-cliInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && cliInput.value.trim()) {
-    const val = cliInput.value.trim();
-    const row = document.createElement('div');
-    row.className = 'term-line';
-
-    // SECURITY FIX: Create DOM elements safely to prevent XSS
-    const prompt = document.createElement('span');
-    prompt.className = 'term-accent';
-    prompt.textContent = '❯';
-
-    const commandText = document.createElement('span');
-    commandText.textContent = ` ${val}`; // textContent automatically escapes HTML
-
-    row.appendChild(prompt);
-    row.appendChild(commandText);
-    cliInput.parentElement.before(row);
-    
-    const res = document.createElement('div');
-    res.className = 'term-line';
-    res.style.color = 'var(--text-tertiary)';
-    if (val.toLowerCase() === 'help') res.textContent = "Commands: npx skills add JuliusBrussee/caveman";
-    else res.textContent = "Input received. Caveman processing... Done. Few words used.";
-    
-    cliInput.parentElement.before(res);
-    cliInput.value = '';
-    termBody.parentElement.scrollTop = termBody.parentElement.scrollHeight;
+  /* ---------- Snackbar + copy ---------- */
+  var snack = $('#snackbar'), snackTimer;
+  function toast(msg) {
+    snack.textContent = msg; snack.classList.add('show');
+    clearTimeout(snackTimer); snackTimer = setTimeout(function () { snack.classList.remove('show'); }, 2600);
   }
-});
+  function copy(text, what) {
+    var done = function () { toast((what || 'Command') + ' copied. Paste it. Rock ready.'); };
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, fallback);
+    else fallback();
+    function fallback() {
+      var ta = el('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (e) { toast('Copy failed. Select the text by hand.'); }
+      ta.remove();
+    }
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-copy-from]');
+    if (b) copy($('#' + b.getAttribute('data-copy-from')).textContent);
+  });
 
-// --- Scroll Reveals ---
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible') });
-}, { threshold: 0.1 });
-document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+  /* ---------- Radio groups (segmented buttons / filter chips) ---------- */
+  function radioGroup(container, onChange) {
+    var items = $$('[role="radio"]', container);
+    function select(btn, focus) {
+      items.forEach(function (b) { var on = b === btn; b.setAttribute('aria-checked', on); b.tabIndex = on ? 0 : -1; });
+      if (focus) btn.focus();
+      onChange(btn);
+    }
+    items.forEach(function (b) {
+      b.tabIndex = b.getAttribute('aria-checked') === 'true' ? 0 : -1;
+      b.addEventListener('click', function () { select(b); });
+      b.addEventListener('keydown', function (e) {
+        var i = items.indexOf(b), n = null;
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') n = items[(i + 1) % items.length];
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') n = items[(i - 1 + items.length) % items.length];
+        if (n) { e.preventDefault(); select(n, true); }
+      });
+    });
+  }
+
+  /* ---------- Theme + dynamic color ---------- */
+  var root = document.documentElement;
+  var SEEDS = [
+    { hex: '#b5541f', name: 'Rock (default)' },
+    { hex: '#6750a4', name: 'Baseline purple' },
+    { hex: '#006a6a', name: 'Cave water' },
+    { hex: '#386a20', name: 'Moss' },
+    { hex: '#0061a4', name: 'Sky' },
+    { hex: '#9c4146', name: 'Berry' }
+  ];
+  var DEFAULT_SEED = SEEDS[0].hex;
+  var ROLES = ['primary','onPrimary','primaryContainer','onPrimaryContainer','secondary','onSecondary','secondaryContainer','onSecondaryContainer','tertiary','onTertiary','tertiaryContainer','onTertiaryContainer','error','onError','errorContainer','onErrorContainer','surface','onSurface','onSurfaceVariant','surfaceContainerLowest','surfaceContainerLow','surfaceContainer','surfaceContainerHigh','surfaceContainerHighest','outline','outlineVariant','inverseSurface','inverseOnSurface','inversePrimary'];
+  var mcu = null, currentSeed = store('caveman-seed') || DEFAULT_SEED;
+  var darkMQ = matchMedia('(prefers-color-scheme: dark)');
+
+  function isDark() {
+    var t = root.getAttribute('data-theme');
+    return t ? t === 'dark' : darkMQ.matches;
+  }
+  function loadMcu() {
+    if (mcu) return Promise.resolve(mcu);
+    return import('https://cdn.jsdelivr.net/npm/@material/material-color-utilities@0.4.0/+esm').then(function (m) { mcu = m; return m; });
+  }
+  function clearDynamic() { ROLES.forEach(function (r) { root.style.removeProperty('--md-sys-color-' + r.replace(/[A-Z]/g, function (c) { return '-' + c.toLowerCase(); })); }); }
+  function applySeed(hex, announce) {
+    currentSeed = hex;
+    if (hex.toLowerCase() === DEFAULT_SEED) { clearDynamic(); store('caveman-scheme', null); syncMeta(); return Promise.resolve(); }
+    return loadMcu().then(function (m) {
+      var dark = isDark(), vars = {};
+      var scheme = new m.SchemeTonalSpot(m.Hct.fromInt(m.argbFromHex(hex)), dark, 0);
+      ROLES.forEach(function (r) {
+        var name = '--md-sys-color-' + r.replace(/[A-Z]/g, function (c) { return '-' + c.toLowerCase(); });
+        vars[name] = m.hexFromArgb(m.MaterialDynamicColors[r].getArgb(scheme));
+        root.style.setProperty(name, vars[name]);
+      });
+      store('caveman-scheme', JSON.stringify({ seed: store('caveman-seed'), dark: dark, vars: vars }));
+      syncMeta();
+      if (announce) toast('New palette from ' + hex + '. Same rock, new paint.');
+    }).catch(function () {
+      clearDynamic(); currentSeed = DEFAULT_SEED;
+      if (announce) toast('Could not load the color engine. Keeping default palette.');
+    });
+  }
+  function syncMeta() {
+    var bg = getComputedStyle(root).getPropertyValue('--md-sys-color-surface').trim();
+    $$('meta[name="theme-color"]').forEach(function (m) { m.setAttribute('content', bg); m.removeAttribute('media'); });
+  }
+  function setTheme(choice) {
+    if (choice === 'system') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', choice);
+    store('caveman-theme', choice === 'system' ? null : choice);
+    $$('[data-theme-choice]').forEach(function (b) { b.setAttribute('aria-checked', b.getAttribute('data-theme-choice') === choice); });
+    applySeed(currentSeed);
+  }
+  darkMQ.addEventListener && darkMQ.addEventListener('change', function () { if (!root.getAttribute('data-theme')) applySeed(currentSeed); });
+  $$('[data-theme-choice]').forEach(function (b) { b.addEventListener('click', function () { setTheme(b.getAttribute('data-theme-choice')); }); });
+  setTheme(store('caveman-theme') || 'system');
+
+  var swatchBox = $('#swatches');
+  function markSwatch() {
+    $$('.swatch', swatchBox).forEach(function (s) { s.setAttribute('aria-checked', (s.getAttribute('data-seed') || '').toLowerCase() === currentSeed.toLowerCase()); });
+  }
+  SEEDS.forEach(function (s) {
+    var b = el('button', { class: 'swatch', role: 'radio', 'data-seed': s.hex, 'aria-label': s.name, title: s.name }, [icon('check')]);
+    b.style.background = s.hex;
+    b.addEventListener('click', function () { store('caveman-seed', s.hex === DEFAULT_SEED ? null : s.hex); applySeed(s.hex, true); markSwatch(); });
+    swatchBox.appendChild(b);
+  });
+  var custom = el('label', { class: 'swatch custom', title: 'Custom color' }, [el('input', { type: 'color', 'aria-label': 'Custom seed color', value: currentSeed })]);
+  $('input', custom).addEventListener('change', function (e) { store('caveman-seed', e.target.value); applySeed(e.target.value, true); markSwatch(); });
+  swatchBox.appendChild(custom);
+  markSwatch();
+
+  // Menu open/close
+  var themeBtn = $('#themeBtn'), themeMenu = $('#themeMenu');
+  function toggleMenu(open) {
+    themeMenu.classList.toggle('open', open); themeBtn.setAttribute('aria-expanded', open);
+    if (open) { var f = $('[aria-checked="true"]', themeMenu); f && f.focus(); }
+  }
+  themeBtn.addEventListener('click', function (e) { e.stopPropagation(); toggleMenu(!themeMenu.classList.contains('open')); });
+  document.addEventListener('click', function (e) { if (!e.target.closest('.menu-anchor')) toggleMenu(false); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (themeMenu.classList.contains('open')) { toggleMenu(false); themeBtn.focus(); }
+    if (drawer.classList.contains('open')) closeDrawer();
+  });
+
+  /* ---------- Nav drawer ---------- */
+  var drawer = $('#navDrawer'), scrim = $('#scrim'), menuToggle = $('#menuToggle');
+  function openDrawer() { drawer.classList.add('open'); scrim.classList.add('open'); menuToggle.setAttribute('aria-expanded', 'true'); var a = $('a', drawer); a && a.focus(); }
+  function closeDrawer() { drawer.classList.remove('open'); scrim.classList.remove('open'); menuToggle.setAttribute('aria-expanded', 'false'); menuToggle.focus(); }
+  menuToggle.addEventListener('click', openDrawer);
+  scrim.addEventListener('click', closeDrawer);
+  $$('a', drawer).forEach(function (a) { a.addEventListener('click', function () { if (a.getAttribute('href').charAt(0) === '#') closeDrawer(); }); });
+
+  /* ---------- App bar scroll state, FAB, scroll spy ---------- */
+  var appBar = $('#appBar'), fab = $('#fab'), installSec = $('#install');
+  var sections = ['try', 'install', 'benchmarks', 'calculator', 'features', 'honest'].map(function (id) { return document.getElementById(id); });
+  function onScroll() {
+    var y = window.scrollY;
+    appBar.classList.toggle('scrolled', y > 8);
+    var ir = installSec.getBoundingClientRect();
+    fab.classList.toggle('hidden', y < 500 || (ir.top < innerHeight && ir.bottom > 0));
+    var current = null;
+    sections.forEach(function (s) { if (s.getBoundingClientRect().top < 120) current = s.id; });
+    $$('.nav-links a, .nav-drawer a').forEach(function (a) { a.setAttribute('aria-current', a.getAttribute('href') === '#' + current); });
+  }
+  addEventListener('scroll', onScroll, { passive: true }); onScroll();
+
+  /* ---------- Reveal ---------- */
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (es) { es.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add('visible'); io.unobserve(en.target); } }); }, { threshold: 0.08 });
+    $$('.reveal').forEach(function (n) { io.observe(n); });
+  } else $$('.reveal').forEach(function (n) { n.classList.add('visible'); });
+
+  /* ---------- Playground ---------- */
+  // Caveman outputs are the examples in skills/caveman/SKILL.md (Intensity section).
+  var QUESTIONS = {
+    react: {
+      label: 'Why re-render?',
+      normal: "The reason your React component is re-rendering is likely because you're creating a new object reference on each render cycle. When you pass an inline object as a prop, React's shallow comparison sees it as a different object every time, which triggers a re-render. I'd recommend using `useMemo` to memoize the object.",
+      levels: {
+        'lite': 'Your component re-renders because you create a new object reference each render. Wrap it in `useMemo`.',
+        'full': 'New object ref each render. Inline object prop = new ref = re-render. Wrap in `useMemo`.',
+        'ultra': 'Inline obj prop, new ref, re-render. `useMemo`.',
+        'wenyan-lite': '組件頻重繪，以每繪新生對象參照故。以 useMemo 包之。',
+        'wenyan-full': '每繪新生對象參照，故重繪；以 useMemo 包之則免。',
+        'wenyan-ultra': '新參照則重繪。useMemo 包之。'
+      }
+    },
+    pool: {
+      label: 'Connection pooling?',
+      normal: "Sure! Connection pooling is a technique where your application keeps a set of database connections open and reuses them, instead of opening a brand-new connection for every single request. This matters because establishing a connection involves a handshake that adds noticeable overhead, so reusing existing connections generally makes things faster.",
+      levels: {
+        'lite': 'Connection pooling reuses open connections instead of creating new ones per request. Avoids repeated handshake overhead.',
+        'full': 'Pool reuse open DB connections. No new connection per request. Skip handshake overhead.',
+        'ultra': 'Pool reuse open DB connections. No per-request handshake.',
+        'wenyan-lite': null,
+        'wenyan-full': '池蓄已開之連，不逐請而新開，省握手之費。',
+        'wenyan-ultra': '池蓄連，免逐請新開，省握手。'
+      }
+    }
+  };
+  var LEVELS = [
+    { id: 'lite', label: 'lite', desc: 'lite — no filler or hedging. Keeps articles and full sentences. Professional but tight.' },
+    { id: 'full', label: 'full', desc: 'full (default) — drops articles, fragments OK, short synonyms. Classic caveman.' },
+    { id: 'ultra', label: 'ultra', desc: 'ultra — one word when one word enough. Each fact stated once. Code symbols never touched.' },
+    { id: 'wenyan-lite', label: '文 lite', desc: 'wenyan-lite — semi-classical Chinese. Drops filler, keeps grammar structure.' },
+    { id: 'wenyan-full', label: '文 full', desc: 'wenyan-full — fully classical Chinese (文言文). Maximum classical terseness.' },
+    { id: 'wenyan-ultra', label: '文 ultra', desc: 'wenyan-ultra — extreme classical abbreviation. Most compression per token.' }
+  ];
+  var play = { q: 'react', lvl: 'full' };
+  function richText(node, s) {
+    node.textContent = '';
+    s.split(/(`[^`]+`)/).forEach(function (part) {
+      if (/^`[^`]+`$/.test(part)) node.appendChild(el('code', { text: part.slice(1, -1) }));
+      else if (part) node.appendChild(document.createTextNode(part));
+    });
+  }
+  var isCJK = function (s) { return /[㐀-鿿]/.test(s); };
+  function countWords(s) { return s.replace(/`/g, '').trim().split(/\s+/).filter(Boolean).length; }
+  function countChars(s) { return s.replace(/`/g, '').replace(/\s+/g, '').length; }
+  function renderPlay() {
+    var q = QUESTIONS[play.q], lvl = play.lvl;
+    var text = q.levels[lvl];
+    if (!text) { // skill file has no wenyan-lite example for this question
+      lvl = 'wenyan-full'; text = q.levels[lvl];
+      toast('No wenyan-lite example for this one. Showing wenyan-full.');
+      var btn = $('#levelSeg [data-level="wenyan-full"]'); btn && btn.click(); return;
+    }
+    var na = $('#normalAnswer'), ca = $('#caveAnswer');
+    richText(na, q.normal); richText(ca, text);
+    ca.classList.toggle('cjk', isCJK(text));
+    ca.classList.remove('fade-swap'); void ca.offsetWidth; ca.classList.add('fade-swap');
+    $('#caveTitle').textContent = 'Caveman · ' + lvl;
+    var cjk = isCJK(text);
+    var nChars = countChars(q.normal), cChars = countChars(text);
+    var nWords = countWords(q.normal), cWords = countWords(text);
+    var nm = $('#normalMetrics'), cm = $('#caveMetrics');
+    nm.textContent = ''; cm.textContent = '';
+    nm.appendChild(el('span', { class: 'badge', text: nWords + ' words' }));
+    nm.appendChild(el('span', { class: 'badge', text: nChars + ' characters' }));
+    if (!cjk) cm.appendChild(el('span', { class: 'badge', text: cWords + ' words' }));
+    cm.appendChild(el('span', { class: 'badge', text: cChars + ' characters' }));
+    var pct = Math.round((1 - cChars / nChars) * 100);
+    cm.appendChild(el('span', { class: 'badge good' }, [icon('arrow_downward'), pct + '% shorter']));
+    $('#levelDesc').textContent = LEVELS.filter(function (l) { return l.id === lvl; })[0].desc;
+  }
+  var qSeg = $('#questionSeg'), lSeg = $('#levelSeg');
+  Object.keys(QUESTIONS).forEach(function (k, i) {
+    qSeg.appendChild(el('button', { role: 'radio', class: 'state', 'aria-checked': i === 0, 'data-q': k }, [icon('check'), QUESTIONS[k].label]));
+  });
+  LEVELS.forEach(function (l) {
+    lSeg.appendChild(el('button', { role: 'radio', class: 'state', 'aria-checked': l.id === 'full', 'data-level': l.id }, [icon('check'), l.label]));
+  });
+  radioGroup(qSeg, function (b) { play.q = b.getAttribute('data-q'); renderPlay(); });
+  radioGroup(lSeg, function (b) { play.lvl = b.getAttribute('data-level'); renderPlay(); });
+  $('#copyAnswer').addEventListener('click', function () { copy($('#caveAnswer').textContent, 'Answer'); });
+  renderPlay();
+
+  /* ---------- Install ---------- */
+  var tabs = $$('#installTabs [role="tab"]');
+  function selectTab(t, focus) {
+    tabs.forEach(function (x) {
+      var on = x === t; x.setAttribute('aria-selected', on); x.tabIndex = on ? 0 : -1;
+      document.getElementById(x.getAttribute('aria-controls')).hidden = !on;
+    });
+    if (focus) t.focus();
+  }
+  tabs.forEach(function (t, i) {
+    t.addEventListener('click', function () { selectTab(t); });
+    t.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight') { e.preventDefault(); selectTab(tabs[(i + 1) % tabs.length], true); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); selectTab(tabs[(i - 1 + tabs.length) % tabs.length], true); }
+    });
+  });
+
+  var AUTO = {
+    unix: { cmd: 'curl -fsSL https://raw.githubusercontent.com/' + REPO + '/main/install.sh | bash', hint: 'Open Terminal, paste, press Enter.' },
+    win: { cmd: 'irm https://raw.githubusercontent.com/' + REPO + '/main/install.ps1 | iex', hint: 'Open PowerShell 5.1 or newer, paste, press Enter.' }
+  };
+  function guessOS() { var p = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || ''; return /win/i.test(p) ? 'win' : 'unix'; }
+  radioGroup($('#osSeg'), function (b) { var o = AUTO[b.getAttribute('data-os')]; $('#autoCmd').textContent = o.cmd; $('#autoHint').textContent = o.hint; });
+  var osBtn = $('#osSeg [data-os="' + guessOS() + '"]'); osBtn.click();
+
+  var agentSelect = $('#agentSelect');
+  agentSelect.appendChild(el('option', { value: '', text: 'All agents found on this computer' }));
+  DATA.agents.forEach(function (a) { agentSelect.appendChild(el('option', { value: a.id, text: a.label })); });
+  var build = { agent: '', size: 'default', flags: {} };
+  var SIZE_HINT = {
+    'default': 'Plugin or skill, plus Claude Code hooks and status badge.',
+    'minimal': 'Just the plugin or skill. No hooks, no rule files.',
+    'all': 'Hooks plus per-repo rule files for your editor.'
+  };
+  function renderCustom() {
+    var parts = ['npx -y github:' + REPO];
+    var flags = [];
+    if (build.agent) flags.push('--only ' + build.agent);
+    if (build.size !== 'default') flags.push('--' + build.size);
+    Object.keys(build.flags).forEach(function (f) {
+      if (!build.flags[f]) return;
+      if (f === '--with-init' && build.size === 'all') return; // --all already includes it
+      flags.push(f);
+    });
+    if (flags.length) parts.push('--', flags.join(' '));
+    $('#customCmd').textContent = parts.join(' ');
+    var a = DATA.agents.filter(function (x) { return x.id === build.agent; })[0];
+    $('#agentMech').textContent = a ? 'Installs via: ' + a.mech : 'Detects every supported agent and installs for each.';
+    $('#sizeHint').textContent = SIZE_HINT[build.size];
+    var ex = $('#customExplain'); ex.textContent = '';
+    var lines = [['terminal', 'Works on macOS, Linux and Windows. Needs Node 18+.']];
+    if (build.flags['--dry-run']) lines.push(['visibility', 'Dry run prints the plan and touches nothing. Remove the flag to install for real.']);
+    if (build.flags['--with-init'] || build.size === 'all') lines.push(['folder', 'Rule files are written into the folder you run this from.']);
+    if (a && /npx skills add/.test(a.mech)) lines.push(['info', a.label + ' is not auto-on: say /caveman at the start of each session, or add rule files.']);
+    lines.forEach(function (l) { ex.appendChild(el('li', {}, [icon(l[0]), el('span', { text: l[1] })])); });
+  }
+  agentSelect.addEventListener('change', function () { build.agent = agentSelect.value; renderCustom(); });
+  radioGroup($('#sizeSeg'), function (b) { build.size = b.getAttribute('data-size'); renderCustom(); });
+  $$('#flagChips .chip').forEach(function (c) {
+    c.addEventListener('click', function () {
+      var on = c.getAttribute('aria-pressed') !== 'true';
+      c.setAttribute('aria-pressed', on); build.flags[c.getAttribute('data-flag')] = on; renderCustom();
+    });
+  });
+  renderCustom();
+
+  /* ---------- Benchmarks ---------- */
+  var maxNormal = Math.max.apply(null, DATA.benchmarks.map(function (b) { return b.normal; }));
+  function benchRow(b, avg) {
+    var bars = el('div', { class: 'bars' }, [
+      el('div', { class: 'bar normal' }, [el('div', { class: 'track' }, [el('div', { class: 'fill', 'data-w': (b.normal / maxNormal * 100) })]), el('span', { text: fmt.format(b.normal) })]),
+      el('div', { class: 'bar cave' }, [el('div', { class: 'track' }, [el('div', { class: 'fill', 'data-w': (b.caveman / maxNormal * 100) })]), el('span', { text: fmt.format(b.caveman) })])
+    ]);
+    return el('div', { class: 'bench-row' + (avg ? ' avg' : ''), role: 'listitem',
+      'aria-label': b.task + ': ' + b.normal + ' tokens normal, ' + b.caveman + ' with caveman, ' + b.saved + '% saved' }, [
+      el('div', { class: avg ? 'title-medium' : 'body-large', text: b.task }), bars, el('div', { class: 'saved', text: b.saved + '%' })
+    ]);
+  }
+  function renderBench(sort) {
+    var list = $('#benchList'), rows = DATA.benchmarks.slice();
+    if (sort === 'saved') rows.sort(function (a, b) { return b.saved - a.saved; });
+    if (sort === 'normal') rows.sort(function (a, b) { return b.normal - a.normal; });
+    list.textContent = '';
+    rows.forEach(function (b) { list.appendChild(benchRow(b)); });
+    var avg = DATA.benchmarkAverage;
+    list.appendChild(benchRow({ task: 'Average', normal: avg.normal, caveman: avg.caveman, saved: avg.saved }, true));
+    requestAnimationFrame(function () { requestAnimationFrame(function () {
+      $$('.fill[data-w]', list).forEach(function (f) { f.style.width = f.getAttribute('data-w') + '%'; });
+    }); });
+  }
+  radioGroup($('#sortChips'), function (b) { renderBench(b.getAttribute('data-sort')); });
+  renderBench('original');
+
+  var ct = $('#compressTable');
+  ct.appendChild(el('thead', {}, [el('tr', {}, ['File', 'Original', 'Compressed', 'Saved'].map(function (h) { return el('th', { scope: 'col', class: 'label-large', text: h }); }))]));
+  var tb = el('tbody');
+  DATA.compress.forEach(function (r) { tb.appendChild(el('tr', {}, [el('td', {}, [el('code', { text: r.file })]), el('td', { text: fmt.format(r.original) }), el('td', { text: fmt.format(r.compressed) }), el('td', {}, [el('strong', { text: r.saved })])])); });
+  ct.appendChild(tb);
+  var ca = DATA.compressAverage;
+  ct.appendChild(el('tfoot', {}, [el('tr', {}, [el('td', { text: 'Average' }), el('td', { text: fmt.format(ca.original) }), el('td', { text: fmt.format(ca.compressed) }), el('td', { text: ca.saved })])]));
+
+  /* ---------- Calculator ---------- */
+  var ids = ['cOut', 'cCut', 'cOver', 'cTurns', 'cPin', 'cPout'];
+  var inputs = {}; ids.forEach(function (id) { inputs[id] = document.getElementById(id); });
+  var money = function (v) {
+    var sign = v < 0 ? '−' : '+', a = Math.abs(v);
+    return sign + '$' + (a >= 100 ? a.toFixed(0) : a >= 1 ? a.toFixed(2) : a.toFixed(3));
+  };
+  function setFill(r) { r.style.setProperty('--fill', ((r.value - r.min) / (r.max - r.min) * 100) + '%'); }
+  function calc() {
+    var num = function (id) { var v = parseFloat(inputs[id].value); return isFinite(v) && v >= 0 ? v : 0; };
+    var out = num('cOut'), cut = num('cCut') / 100, over = num('cOver'), turns = num('cTurns');
+    var pin = num('cPin') / 1e6, pout = num('cPout') / 1e6;
+    $('#cOutV').textContent = fmt.format(out); $('#cCutV').textContent = Math.round(cut * 100) + '%';
+    $('#cOverV').textContent = fmt.format(over); $('#cTurnsV').textContent = fmt.format(turns);
+    ['cOut', 'cCut', 'cOver', 'cTurns'].forEach(function (id) { setFill(inputs[id]); });
+    var savedTok = out * cut;
+    var perTurn = savedTok * pout - over * pin; // positive = caveman saves money
+    var day = perTurn * turns;
+    $('#sOutSaved').textContent = '−' + fmt.format(Math.round(savedTok));
+    $('#sInAdded').textContent = '+' + fmt.format(Math.round(over));
+    $('#sDay').textContent = money(day); $('#sMonth').textContent = money(day * 30);
+    var breakEven = (cut > 0 && pout > 0) ? Math.ceil(over * pin / (cut * pout)) : Infinity;
+    $('#sBreak').textContent = isFinite(breakEven) ? 'Normal answers longer than ~' + fmt.format(breakEven) + ' output tokens' : 'Never — no output savings at these settings';
+    var v = $('#verdict'), win = perTurn > 0;
+    v.className = 'verdict ' + (win ? 'win' : 'lose');
+    $('#verdictIcon').textContent = win ? 'savings' : 'money_off';
+    $('#verdictTitle').textContent = win ? 'Caveman saves you money' : (perTurn === 0 ? 'Break even' : 'Caveman costs you money');
+    $('#verdictSub').textContent = win ? 'Output savings beat the rules overhead. Rock pay for itself.' : 'Rules overhead beats the output savings. Use it for reading speed, or turn it off.';
+  }
+  ids.forEach(function (id) { inputs[id].addEventListener('input', calc); });
+  calc();
+
+  /* ---------- Features ---------- */
+  var FEATURES = [
+    { icon: 'compress', cmd: '/caveman [lite|full|ultra|wenyan]', title: 'Compress every reply', body: 'Level sticks for the session. Code, commands and errors stay exact.' },
+    { icon: 'commit', cmd: '/caveman-commit', title: 'Tight commit messages', body: 'Conventional Commits, subject of 50 characters or less. Why over what.' },
+    { icon: 'rate_review', cmd: '/caveman-review', title: 'One-line code review', body: 'L42: 🔴 bug: user null. Add guard. Findings without the essay.' },
+    { icon: 'monitoring', cmd: '/caveman-stats', title: 'See real savings', body: 'Reads your real session log: tokens, lifetime savings, dollars. Share line with --share.' },
+    { icon: 'description', cmd: '/caveman-compress <file>', title: 'Shrink memory files', body: 'Rewrites files like CLAUDE.md in caveman-speak. ~46% fewer input tokens every session after.' },
+    { icon: 'cable', cmd: 'caveman-shrink', title: 'MCP middleware', body: 'Wraps any MCP server and compresses its tool descriptions. Published on npm.' },
+    { icon: 'groups', cmd: 'cavecrew-*', title: 'Caveman subagents', body: 'Investigator, builder, reviewer. ~60% fewer tokens than vanilla, so main context lasts longer.' },
+    { icon: 'badge', cmd: '[CAVEMAN] ⛏ 12.4k', title: 'Status line badge', body: 'Claude Code shows the active level and lifetime tokens saved. Silence with CAVEMAN_STATUSLINE_SAVINGS=0.' },
+    { icon: 'health_and_safety', cmd: 'auto-clarity', title: 'Speaks clearly when it matters', body: 'Security warnings and irreversible actions get plain sentences. Then caveman resumes.' }
+  ];
+  var fg = $('#featureGrid');
+  FEATURES.forEach(function (f) {
+    fg.appendChild(el('article', { class: 'card card-elevated feature reveal visible' }, [
+      el('div', { class: 'feat-icon' }, [icon(f.icon)]),
+      el('h3', { class: 'title-medium', text: f.title }),
+      el('code', { class: 'cmd', text: f.cmd }),
+      el('p', { text: f.body })
+    ]));
+  });
+})();
 </script>
 </body>
 </html>

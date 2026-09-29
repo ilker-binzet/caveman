@@ -298,6 +298,7 @@ To reproduce: `uv run python benchmarks/run.py` (needs `ANTHROPIC_API_KEY` in `.
 - README most important file for user-facing impact. Optimize for non-technical readers. Preserve caveman voice.
 - `INSTALL.md` is the per-agent install reference. Keep the install table in `README.md` short and link out to `INSTALL.md` for the full matrix.
 - Benchmark and eval numbers must be real. Never fabricate or estimate.
+- `docs/index.html` (Material 3 site) keeps its numbers and agent list in the `site-data` JSON block. Update it whenever the README benchmark/compress tables or `PROVIDERS` change — `node tests/test_docs_site.js` fails on drift.
 - CI workflow commits back to main after merge. Account for when checking branch state.
 - Hook files must silent-fail on all filesystem errors. Never let hook crash block session start.
 - Any new flag file write must go through `safeWriteFlag()` in `caveman-config.js`. Direct `fs.writeFileSync` on predictable user-owned paths reopens the symlink-clobber attack surface.
